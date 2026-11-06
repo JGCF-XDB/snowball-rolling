@@ -1,0 +1,6 @@
+{
+  "name": "SnowballArena.Runtime",
+  "rootNamespace": "SnowballArena",
+  "references": ["Unity.InputSystem"],
+  "autoReferenced": true
+}

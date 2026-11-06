@@ -1,0 +1,7 @@
+{
+  "name": "SnowballArena.Editor",
+  "rootNamespace": "SnowballArena.Editor",
+  "references": ["SnowballArena.Runtime", "Unity.InputSystem"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}
