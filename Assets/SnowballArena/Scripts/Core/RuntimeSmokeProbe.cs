@@ -16,7 +16,7 @@ namespace SnowballArena
         private string output;
         private float startTime;
         private int phase;
-        private bool diagonal, moved, fell, reset;
+        private bool diagonal, moved, grew, fell, reset;
         private string failure;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -37,6 +37,9 @@ namespace SnowballArena
             Directory.CreateDirectory(output);
             keyboard = InputSystem.AddDevice<Keyboard>();
             session = FindFirstObjectByType<PrototypeSession>();
+            if (session != null && session.practiceTargets.Length == 2 &&
+                session.practiceTargets[1].Radius <= session.player.Radius * 1.4f)
+                failure = "Heavy practice target did not retain its configured size at runtime";
             startTime = Time.realtimeSinceStartup;
             Application.logMessageReceived += OnLog;
         }
@@ -66,6 +69,7 @@ namespace SnowballArena
                     if (diagonal) InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.D));
                 }
                 moved |= session.player.RigidBody.position.x > 1f;
+                grew |= session.player.Radius > session.player.settings.initialRadius + 0.025f;
                 if (session.HasFallen)
                 {
                     fell = true;
@@ -83,6 +87,11 @@ namespace SnowballArena
             {
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                 reset = !session.HasFallen && Mathf.Abs(session.player.RigidBody.position.x) < 0.1f;
+                reset &= Mathf.Abs(session.player.Radius - session.player.settings.initialRadius) < 0.001f;
+                var growth = session.player.GetComponent<SnowballGrowth>();
+                reset &= growth == null || growth.RolledDistance < 0.01d;
+                for (int i = 0; i < session.practiceTargets.Length; i++)
+                    reset &= Vector3.Distance(session.practiceTargets[i].RigidBody.position, session.targetSpawns[i]) < 0.1f;
                 if (reset) { startTime = Time.realtimeSinceStartup; phase = 4; }
             }
             else if (phase == 4 && elapsed > 1f)
@@ -94,9 +103,10 @@ namespace SnowballArena
 
         private void Finish(string error)
         {
-            bool passed = diagonal && moved && fell && reset && string.IsNullOrEmpty(error);
+            bool growthRequired = session != null && session.player.GetComponent<SnowballGrowth>() != null;
+            bool passed = diagonal && moved && (!growthRequired || grew) && fell && reset && string.IsNullOrEmpty(error);
             File.WriteAllText(Path.Combine(output, "runtime-smoke.txt"),
-                $"passed={passed}\ndiagonal={diagonal}\nmoved={moved}\nfell={fell}\nreset={reset}\nerror={error}\n");
+                $"passed={passed}\ndiagonal={diagonal}\nmoved={moved}\ngrew={grew}\nfell={fell}\nreset={reset}\nfixedDeltaTime={Time.fixedDeltaTime}\nerror={error}\n");
             Application.logMessageReceived -= OnLog;
             if (keyboard != null) InputSystem.RemoveDevice(keyboard);
             Application.Quit(passed ? 0 : 1);
@@ -106,26 +116,21 @@ namespace SnowballArena
         private IEnumerator Capture(string filename)
         {
             yield return new WaitForEndOfFrame();
-            // Managed file I/O also supports project paths containing Chinese characters.
-            var texture = ScreenCapture.CaptureScreenshotAsTexture();
-            if (texture == null)
-            {
-                // Hidden Windows players may have no presentable back buffer. Render the
-                // camera separately; this image intentionally excludes the OnGUI overlay.
-                var camera = Camera.main;
-                var previous = RenderTexture.active;
-                var target = new RenderTexture(1280, 720, 24);
-                camera.targetTexture = target;
-                camera.Render();
-                RenderTexture.active = target;
-                texture = new Texture2D(1280, 720, TextureFormat.RGB24, false);
-                texture.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
-                texture.Apply();
-                camera.targetTexture = null;
-                RenderTexture.active = previous;
-                Destroy(target);
-                filename = Path.GetFileNameWithoutExtension(filename) + "-camera.png";
-            }
+            // Hidden Windows players do not expose a presentable screen buffer.
+            // These diagnostic images contain the scene camera, not the OnGUI overlay.
+            var camera = Camera.main;
+            var previous = RenderTexture.active;
+            var target = new RenderTexture(1280, 720, 24);
+            camera.targetTexture = target;
+            camera.Render();
+            RenderTexture.active = target;
+            var texture = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+            texture.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
+            texture.Apply();
+            camera.targetTexture = null;
+            RenderTexture.active = previous;
+            Destroy(target);
+            filename = Path.GetFileNameWithoutExtension(filename) + "-camera.png";
             File.WriteAllBytes(Path.Combine(output, filename), texture.EncodeToPNG());
             Destroy(texture);
         }

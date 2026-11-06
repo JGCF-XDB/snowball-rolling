@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 3878462727564231843}
   - component: {fileID: 7597781039791865354}
   - component: {fileID: 8649660618735156543}
+  - component: {fileID: 6623000826909390825}
   m_Layer: 9
   m_Name: Snowball
   m_TagString: Untagged
@@ -129,6 +130,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.PlayerInputSource
   controls: {fileID: -944628639613478452, guid: ad7a940f963b11c47ae6460ecdc5cf87, type: 3}
   cameraFrame: {fileID: 0}
+--- !u!114 &6623000826909390825
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1548324961848358307}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45ff5d6edba5b444c958065378653301, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.SnowballGrowth
 --- !u!1 &6022459764777401065
 GameObject:
   m_ObjectHideFlags: 0

@@ -14,3 +14,5 @@ TestResults/
 *.pidb
 *.pdb
 *.log
+Assets/Resources/PerformanceTestRun*.json
+Assets/Resources/PerformanceTestRun*.json.meta

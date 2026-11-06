@@ -8,6 +8,8 @@ namespace SnowballArena
     {
         public SnowballBody player;
         public ArenaDefinition arena;
+        public SnowballBody[] practiceTargets = new SnowballBody[0];
+        public Vector3[] targetSpawns = new Vector3[0];
         public bool HasFallen { get; private set; }
         private GUIStyle title, label, small, button;
         private Font font;
@@ -28,6 +30,8 @@ namespace SnowballArena
             var motor = player.GetComponent<SnowballMotor>();
             motor.SetMoveDirection(Vector3.zero);
             motor.controlEnabled = true;
+            for (int i = 0; i < practiceTargets.Length && i < targetSpawns.Length; i++)
+                if (practiceTargets[i] != null) practiceTargets[i].ResetAt(targetSpawns[i]);
             HasFallen = false;
         }
 
@@ -47,7 +51,12 @@ namespace SnowballArena
             float width = Screen.width / scale, height = Screen.height / scale;
             Panel(new Rect(24, 22, 310, 105));
             GUI.Label(new Rect(44, 34, 280, 40), "雪山 · 滚雪球", title);
-            GUI.Label(new Rect(44, 83, 280, 25), "操控练习  /  单雪球原型", small);
+            GUI.Label(new Rect(44, 83, 280, 25), "成长与碰撞练习  /  白球为玩家", small);
+            Panel(new Rect(width - 284, 22, 260, 113));
+            var growth = player.GetComponent<SnowballGrowth>();
+            GUI.Label(new Rect(width - 266, 35, 235, 28), $"半径  {player.Radius:F2} m", label);
+            GUI.Label(new Rect(width - 266, 64, 235, 28), $"质量  {player.RigidBody.mass:F1} kg", label);
+            GUI.Label(new Rect(width - 266, 96, 235, 23), $"有效滚动  {(growth != null ? growth.RolledDistance : 0):F1} m", small);
             Panel(new Rect(24, height - 80, 450, 56));
             GUI.Label(new Rect(44, height - 66, 420, 30), "W A S D  移动方向     ·     R  重新练习", label);
             if (HasFallen)
