@@ -40,7 +40,7 @@ namespace SnowballArena.Editor
             var ballBlue = MakeMaterial("SnowballIce", new Color(0.34f, 0.76f, 0.85f));
             var surfacePhysics = new PhysicsMaterial("Snow Contact")
             {
-                dynamicFriction = 0.45f, staticFriction = 0.5f, bounciness = 0.18f,
+                dynamicFriction = 0.45f, staticFriction = 0.5f, bounciness = 0.65f,
                 frictionCombine = PhysicsMaterialCombine.Average, bounceCombine = PhysicsMaterialCombine.Average
             };
             AssetDatabase.CreateAsset(surfacePhysics, Root + "/Materials/SnowContact.physicMaterial");
@@ -246,7 +246,7 @@ namespace SnowballArena.Editor
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                scenes = new[] { ScenePath }, locationPathName = "Builds/Windows/SnowballArena.exe",
+                scenes = new[] { ScenePath }, locationPathName = "Builds/PhysicsPractice/SnowballPractice.exe",
                 target = BuildTarget.StandaloneWindows64, options = BuildOptions.Development
             });
             if (report.summary.result != BuildResult.Succeeded) throw new Exception("Windows build failed: " + report.summary.result);

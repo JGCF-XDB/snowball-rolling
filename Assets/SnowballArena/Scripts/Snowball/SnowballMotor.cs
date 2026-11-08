@@ -24,6 +24,7 @@ namespace SnowballArena
             if (ball == null) ball = GetComponent<SnowballBody>();
             if (ball.RigidBody == null) ball.Initialize();
             var body = ball.RigidBody;
+            if (body.isKinematic) { HasSupport = false; return; }
             var settings = ball.settings;
             HasSupport = ArenaQuery.TrySupport(gameObject.scene.GetPhysicsScene(), body.position,
                 ball.Radius, supportLayers, settings.supportProbeGap, settings.minimumSupportNormal, out var hit);

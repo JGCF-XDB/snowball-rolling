@@ -1,57 +1,69 @@
 # 雪山滚雪球
 
-当前里程碑：执行规划的步骤 1～5，滚动成长与碰撞练习原型。
+Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 
-## 打开与运行
+## 运行
 
-1. 用 Unity **6000.3.28f1** 打开本工程。
-2. 打开 `Assets/SnowballArena/Scenes/Arena.unity`。
-3. 点击 Play，再点击 Game 画面使其获得键盘焦点。
-4. **WASD** 控制屏幕方向；**R** 重置练习。掉出平台后也可以点击“重新练习”。
+双击 `Builds/Windows/SnowballArena.exe`，点击游戏窗口使其获得键盘焦点。必须保留同目录的 Data、MonoBleedingEdge 等运行依赖，不要只复制 exe。
 
-移动依赖 Input System，项目已启用该系统，不需要改成旧 Input Manager。
-如果画面仍是模板场景，请打开 Arena；原 SampleScene 保留不变。
+在 Unity 中打开 `Assets/SnowballArena/Scenes/Match.unity` 后点击 Play。原模板 SampleScene 和物理练习场 Arena 都保留。
 
-## 本阶段范围
+## 操作
 
-- 圆形实体平台、斜俯视镜头、无人物的雪球。
-- 刚体受力移动、接触摩擦带动球体旋转、地面阻力和自然掉落。
-- 画面方向的 WASD 输入，斜向归一化；空中不提供驱动力。
-- 练习重置与掉落提示。
-- 按有效滚动距离增加体积，更新质量和实心球转动惯量；没有玩法大小上限。
-- 绿色同尺寸、橙色较大尺寸的被动练习球，可被推动并在滚动时成长。
-- 显示玩家半径、质量和有效滚动距离；R 同时重置所有练习球。
+- 主菜单：← / → 选择 0～15 个机器人，Enter 开始；也可以点击加减按钮。
+- 比赛：WASD 控制白色雪球；斜向输入归一化。雪球按镜头方向移动，具有惯性。
+- Esc：返回菜单。
+- 出局或结算后：R 重新开始；玩家出局后其余雪球继续比赛，可观战。
+- 0 个机器人：自由练习，掉落后结算。
 
-尚未实现：机器人、人数选择、正式胜负结算、炮台、平台运动，以及完整雪山美术。这些按后续规划逐步接入。
+1 名真人与所选数量的机器人在同一个平台上比赛；最后存活者获胜。同一物理步内全部落台则判平局。
 
-## 可调参数与扩展
+所有正式参赛雪球初始半径、密度、驱动力和成长参数相同。机器人只输出移动方向，不获得额外力度，不直接设置速度或位置。
 
-- `Assets/SnowballArena/Configs/DefaultSnowball.asset`：初始半径、密度、驱动力、地面阻力、每米体积增长量和支撑查询参数。
-- `Assets/SnowballArena/Configs/CircularArena.asset`：初始圆形场地生成参数、出生点、掉落高度和瞄准中心。
-- `Assets/SnowballArena/Materials/SnowContact.physicMaterial`：接触摩擦与恢复系数。
-- `ArenaDefinition.previewRadius/thickness` 目前是生成参数。修改后不会自动改写已生成网格；现有场景的几何以 MeshCollider 为准。
-- `ArenaSurface` 提供自定义中心、表面速度与机关挂载点；`ArenaQuery` 查询真实碰撞表面，不将移动或落台写死为圆形半径。
-- 雪球根物体缩放保持 `(1,1,1)`；碰撞半径和视觉子物体尺寸由 `SnowballBody` 管理。
-- 控制驱动力采用 `ForceMode.Force`，不在移动中直接写入速度；质量增加后同样的力自然产生较小加速度。
+## 已实现
 
-## 检查与构建
+- 圆形实体平台、自然掉落、固定斜俯视镜头、低多边形雪山和雪松环境。
+- 力驱动的滚动、摩擦、惯性、按距离增长、质量和转动惯量变化。
+- 刚体碰撞，不添加人为击飞；撞击不缩小、不破碎。
+- 人数选择、倒计时、单局胜负、同时淘汰判平局、观战、重开。
+- 机器人目标选择、边缘预判、持续追击、分散滚动、受阻脱离。
+- 半径与质量显示、玩家身份与剩余人数提示。
 
-菜单 `Snowball Arena > Validate Prototype Physics` 运行独立物理场景检查，报告输出到 `TestResults/physics-validation.json`。在编辑模式执行。
+首版为可玩原型，环境是自行制作的简化低多边形场景，并非原视频美术资源的逐像素复刻。炮台和平台运动尚未实现，接口已预留。当前没有音乐和音效。
 
-菜单 `Snowball Arena > Build Windows Prototype` 输出开发版到 `Builds/Windows/SnowballArena.exe`。使用 Mono 后端，便于早期快速验证。必须保留整个输出文件夹，不能仅复制 exe。
+## 调参
 
-`Create Prototype Scene` 用于空工程首次生成。为保护手动修改，已有 Arena 场景时它会拒绝覆盖；正常开发直接编辑现有场景和预制体。
+- `Assets/SnowballArena/Configs/DefaultSnowball.asset`：初始半径、密度、驱动力、地面阻力、每米体积增长量、支撑探测参数。
+- `Assets/SnowballArena/Configs/CircularArena.asset`：出生参考、淘汰高度、自定义中心。previewRadius / thickness 仅是初次生成参数，修改不会自动重建网格。
+- `Assets/SnowballArena/Materials/SnowContact.physicMaterial`：摩擦和恢复系数。
+- `Match Controller`：默认机器人数量和倒计时时长。
+- 球根物体缩放保持 (1,1,1)，由 SnowballBody 更新球形碰撞半径与视觉子物体尺寸。
 
-原始工程已建立 Git 基线，Library、Temp、Logs、Builds 和验证输出均不提交。
+## 平台扩展
 
-## 后续顺序
+`ArenaSurface` 暴露自定义瞄准点、表面速度和炮台挂载点；`ArenaQuery` 读取真实碰撞表面；`SpawnService` 根据表面支撑和边缘安全距离安排出生，不依赖圆形半径公式。
 
-6. 单局比赛、淘汰和结算。
-7. 机器人与安全出生。
-8. 人数选择与完整界面。
-9. 异形平台扩展验证。
-10. 雪山美术与反馈。
-11. 整体验收和正式 Windows 试玩包。
+修改形状时替换 Arena Surface 的可见网格与静态 MeshCollider，并同步修改装饰用圆形 Ice rim、镜头范围和自定义中心。表面对象使用 Arena 层。可用单个 MeshCollider 表达凹多边形或孔洞；多个独立平台需扩展出生区域聚合逻辑。
+
+已用带中心孔洞的矩形环验证支撑、八人安全出生和自定义瞄准点。后续炮台可通过 surface.AimPoint 获得目标，炮弹接入有质量和速度的刚体碰撞；旋转平台可通过 surface.VelocityAt 提供表面速度。
+
+## 练习场与源码
+
+`Assets/SnowballArena/Scenes/Arena.unity` 保留白色玩家球、绿色同质量目标、橙色较大质量目标，用于独立检查成长与碰撞。WASD 移动，R 同时重置三个球。它没有机器人或胜负流程。
+
+主要代码位于 `Assets/SnowballArena/Scripts`，分别按 Core、Input、Snowball、AI、Arena、Presentation 分组。
+
+## 验证与打包
+
+- 菜单 `Snowball Arena > Build Windows Game`：输出正式对局测试包到 `Builds/Windows`。
+- 菜单 `Snowball Arena > Build Windows Prototype`：单独输出物理练习场到 `Builds/PhysicsPractice`。
+- `Validate Prototype Physics`：9 项移动、支撑、惯性、掉落、重置和输入方向检查。
+- `Validate Growth and Collisions`：10 项碰撞、成长、质量和帧分割一致性检查。
+- `ArenaExtensionValidation.Run`：矩形环支撑、孔洞出生和自定义中心检查。
+- 开发版 `--match-smoke <输出目录>`：自动检查菜单键盘、倒计时、输入、机器人运动、胜负、平局、观战、重开、0/15 机器人数与自然对局。
+- 独立练习场开发版 `--snowball-smoke <输出目录>`：检查移动、成长、掉落与全部练习球的重置。
+- 检查报告与相机截图在 `TestResults` 中。诊断相机图不含 OnGUI 界面，不能当作界面人工验收截图。
+- Library、Temp、Logs、Builds、TestResults 和自动生成的性能报告不进入 Git。
 
 ## 成长与碰撞模型
 
@@ -63,11 +75,3 @@
 - 为防止增大后的碰撞体陷地，接地增长时球心竖直抬高半径增量。这是几何修正；不修改水平位置、不提供向上的发射速度。它不是完整积雪变形仿真。
 - 碰撞交给刚体求解器，不叠加额外击飞力。动量检查在关闭驱动、地面外力和成长的隔离场景进行；真实对局还有地面与收集积雪带来的外部作用。
 - 没有设置最大半径；仍受浮点数和物理引擎的有限数值范围约束。已检查半径超过平台半径时仍能继续增长，未声称无限尺寸下稳定。
-
-## 验证入口
-
-- `Snowball Arena > Validate Prototype Physics`：9 项移动、支撑、惯性、掉落、重置和输入方向检查。
-- `Snowball Arena > Validate Growth and Collisions`：10 项碰撞、质量、成长、帧分割一致性和重置检查。
-- 结果分别保存到 `TestResults/physics-validation.json` 与 `TestResults/growth-collision-validation.json`。
-- 开发版可用 `--snowball-smoke <输出目录>` 自动验证虚拟键盘输入、落台和重置。正常启动不启用该工具。
-- 隐藏窗口可能没有可截取的屏幕缓冲；此时输出 `*-camera.png`，只包含场景相机画面，不包含 OnGUI 界面，不能当作界面人工验收截图。

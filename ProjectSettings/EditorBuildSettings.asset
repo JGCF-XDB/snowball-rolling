@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/SnowballArena/Scenes/Match.unity
+    guid: d1e164567f0af5d46a91272305ba134a
+  - enabled: 1
     path: Assets/SnowballArena/Scenes/Arena.unity
     guid: 6b21051cbe827fa40a62937986393b39
   m_configObjects:
