@@ -127,7 +127,7 @@ namespace SnowballArena.Editor
             Check("Reset restores radius, mass and zero momentum", () =>
             {
                 using var f = new Fixture(); f.Step(90, Vector3.right);
-                f.Ball.ResetAt(new Vector3(0, 0.8f, -2));
+                f.Ball.ResetAt(new Vector3(0, f.Ball.Radius + 0.15f, -2));
                 Require(f.Ball.RigidBody.linearVelocity.sqrMagnitude < 0.0001f && f.Ball.RigidBody.angularVelocity.sqrMagnitude < 0.0001f, "Reset retained momentum");
                 Require(Mathf.Abs(f.Ball.RigidBody.mass - f.Ball.settings.InitialMass) < 0.001f, "Reset mass mismatch");
                 f.Step(60, Vector3.zero); Require(f.Motor.HasSupport, "Reset sphere not supported");

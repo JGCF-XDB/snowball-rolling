@@ -15,5 +15,5 @@ MonoBehaviour:
   previewRadius: 11
   thickness: 2.2
   fallHeight: -7
-  spawnPosition: {x: 0, y: 0.8, z: -2}
+  spawnPosition: {x: 0, y: 1, z: -2}
   localAimPoint: {x: 0, y: 0, z: 0}

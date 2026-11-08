@@ -316,11 +316,11 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 303373766}
   serializedVersion: 5
-  m_Mass: 28.758661
+  m_Mass: 64.31103
   m_LinearDamping: 0
   m_AngularDamping: 0.12
   m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaTensor: {x: 18.585888, y: 18.585888, z: 18.585888}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
   m_IncludeLayers:
     serializedVersion: 2
@@ -329,7 +329,7 @@ Rigidbody:
     serializedVersion: 2
     m_Bits: 0
   m_ImplicitCom: 1
-  m_ImplicitTensor: 1
+  m_ImplicitTensor: 0
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
@@ -354,7 +354,7 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.65
+  m_Radius: 0.85
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &303373773
 MonoBehaviour:
@@ -508,7 +508,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1155270468806790545, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_Radius
-      value: 1
+      value: 1.275
       objectReference: {fileID: 0}
     - target: {fileID: 1548324961848358307, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_Name
@@ -568,15 +568,15 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 28f6b2a815f58e745b9f162099f3d5f2, type: 2}
     - target: {fileID: 6897358006987380061, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 2.55
       objectReference: {fileID: 0}
     - target: {fileID: 6897358006987380061, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 2.55
       objectReference: {fileID: 0}
     - target: {fileID: 6897358006987380061, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 2.55
       objectReference: {fileID: 0}
     - target: {fileID: 7597781039791865354, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: controlEnabled
@@ -584,7 +584,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_Mass
-      value: 104.719765
+      value: 217.04968
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_ImplicitTensor
@@ -592,15 +592,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_InertiaTensor.x
-      value: 41.887905
+      value: 141.13655
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_InertiaTensor.y
-      value: 41.887905
+      value: 141.13655
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_InertiaTensor.z
-      value: 41.887905
+      value: 141.13655
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8649660618735156543, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
@@ -654,8 +654,8 @@ MonoBehaviour:
   - {fileID: 1956352668}
   - {fileID: 1152563638}
   targetSpawns:
-  - {x: -3, y: 0.8, z: 2}
-  - {x: 3, y: 1.15, z: 3}
+  - {x: -3, y: 1, z: 2}
+  - {x: 3, y: 1.425, z: 3}
 --- !u!4 &1299859371
 Transform:
   m_ObjectHideFlags: 0
@@ -699,7 +699,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.3, y: 1.3, z: 1.3}
+  m_LocalScale: {x: 1.7, y: 1.7, z: 1.7}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 303373768}
@@ -933,15 +933,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_InertiaTensor.x
-      value: 4.8602133
+      value: 18.585888
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_InertiaTensor.y
-      value: 4.8602133
+      value: 18.585888
       objectReference: {fileID: 0}
     - target: {fileID: 7860883394388524882, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}
       propertyPath: m_InertiaTensor.z
-      value: 4.8602133
+      value: 18.585888
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8649660618735156543, guid: 04b36bd3314e06849891e49d34a1a097, type: 3}

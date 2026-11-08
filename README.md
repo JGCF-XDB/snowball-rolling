@@ -33,6 +33,8 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 
 ## 调参
 
+当前默认初始半径 **0.85 m**（体积约 2.57 m³、质量约 64.31 kg），驱动力 **520 N**，地面线性阻力系数 **40**。相比最初版本，初始体积约为 2.24 倍，起步加速和移动速度均提高；玩家与机器人共用同一配置。
+
 - `Assets/SnowballArena/Configs/DefaultSnowball.asset`：初始半径、密度、驱动力、地面阻力、每米体积增长量、支撑探测参数。
 - `Assets/SnowballArena/Configs/CircularArena.asset`：出生参考、淘汰高度、自定义中心。previewRadius / thickness 仅是初次生成参数，修改不会自动重建网格。
 - `Assets/SnowballArena/Materials/SnowContact.physicMaterial`：摩擦和恢复系数。

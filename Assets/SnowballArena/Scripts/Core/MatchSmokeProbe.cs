@@ -54,7 +54,7 @@ namespace SnowballArena
             match.Participants[1].body.RigidBody.position = Vector3.down * 20; match.ResolveEliminations();
             if (!Check(match.Phase == MatchPhase.Results && match.Result == "你赢了！", "Last player wins")) yield break;
             yield return KeyPress(Key.R); yield return null;
-            if (!Check(match.Phase == MatchPhase.Countdown && match.Participants.Count == 2 && match.Participants[0].body.Radius < 0.66f, "R restarts with reset bodies")) yield break;
+            if (!Check(match.Phase == MatchPhase.Countdown && match.Participants.Count == 2 && Mathf.Abs(match.Participants[0].body.Radius - match.Participants[0].body.settings.initialRadius) < 0.001f, "R restarts with reset bodies")) yield break;
             match.BeginRunning();
             foreach (var p in match.Participants) p.body.RigidBody.position = Vector3.down * 20;
             match.ResolveEliminations();
@@ -77,7 +77,7 @@ namespace SnowballArena
             bool spaced = match.Participants.Count == 16;
             for (int i = 0; i < match.Participants.Count; i++)
                 for (int j = i + 1; j < match.Participants.Count; j++)
-                    spaced &= Vector3.Distance(match.Participants[i].body.RigidBody.position, match.Participants[j].body.RigidBody.position) > 1.3f;
+                    spaced &= Vector3.Distance(match.Participants[i].body.RigidBody.position, match.Participants[j].body.RigidBody.position) > match.Participants[i].body.Radius + match.Participants[j].body.Radius;
             if (!Check(spaced, "Sixteen participants spawn without overlap")) yield break;
             // Let a crowded match resolve naturally. The human is deliberately idle.
             Time.timeScale = 4f;

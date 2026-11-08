@@ -8,6 +8,34 @@ namespace SnowballArena.Editor
 {
     public static class PhysicsPracticeBuilder
     {
+        public static void RefreshConfiguredBodiesAndBuild()
+        {
+            var prefab = PrefabUtility.LoadPrefabContents(PrototypeBuilder.PrefabPath);
+            try
+            {
+                prefab.GetComponent<SnowballBody>().Initialize();
+                PrefabUtility.SaveAsPrefabAsset(prefab, PrototypeBuilder.PrefabPath);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(prefab); }
+            var scene = EditorSceneManager.OpenScene(PrototypeBuilder.ScenePath);
+            var session = UnityEngine.Object.FindFirstObjectByType<PrototypeSession>();
+            session.player.ResetAt(session.arena.spawnPosition);
+            for (int i = 0; i < session.practiceTargets.Length; i++)
+            {
+                var target = session.practiceTargets[i];
+                session.targetSpawns[i].y = target.settings.initialRadius + 0.15f;
+                target.ResetAt(session.targetSpawns[i]);
+                foreach (var component in target.GetComponentsInChildren<Component>())
+                    if (PrefabUtility.IsPartOfPrefabInstance(component)) PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+            }
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            PrototypeValidation.Run();
+            GrowthCollisionValidation.Run();
+            MatchSceneBuilder.BuildWindowsGame();
+        }
+
         [MenuItem("Snowball Arena/Upgrade Growth and Collision Practice")]
         public static void Upgrade()
         {
@@ -26,7 +54,8 @@ namespace SnowballArena.Editor
             if (session.practiceTargets.Length == 0)
             {
                 var targets = new SnowballBody[2];
-                var spawns = new[] { new Vector3(-3, 0.8f, 2), new Vector3(3, 1.15f, 3) };
+                float radius = session.player.settings.initialRadius;
+                var spawns = new[] { new Vector3(-3, radius + 0.15f, 2), new Vector3(3, radius * 1.5f + 0.15f, 3) };
                 for (int i = 0; i < 2; i++)
                 {
                     var target = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeBuilder.PrefabPath)) as GameObject;
@@ -34,7 +63,7 @@ namespace SnowballArena.Editor
                     UnityEngine.Object.DestroyImmediate(target.GetComponent<PlayerInputSource>());
                     var settings = UnityEngine.Object.Instantiate(session.player.settings);
                     settings.name = i == 0 ? "EqualTarget" : "HeavyTarget";
-                    settings.initialRadius = i == 0 ? 0.65f : 1f;
+                    settings.initialRadius = i == 0 ? radius : radius * 1.5f;
                     AssetDatabase.CreateAsset(settings, PrototypeBuilder.Root + "/Configs/" + settings.name + ".asset");
                     targets[i] = target.GetComponent<SnowballBody>();
                     targets[i].settings = settings;

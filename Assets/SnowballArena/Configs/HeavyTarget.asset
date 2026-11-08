@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4453fb3ac2af13b4d85ce520b26908fa, type: 3}
   m_Name: HeavyTarget
   m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.SnowballSettings
-  initialRadius: 1
+  initialRadius: 1.275
   density: 25
-  driveForce: 155
-  groundDrag: 17
+  driveForce: 520
+  groundDrag: 40
   volumePerMetre: 0.16
   supportProbeGap: 0.06
   minimumSupportNormal: 0.6
