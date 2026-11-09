@@ -7,11 +7,11 @@ namespace SnowballArena
     {
         [Min(0.1f)] public float initialRadius = 0.85f;
         [Min(1f)] public float density = 25f;
-        [Min(0f)] public float driveForce = 760f;
+        [Min(0f)] public float driveForce = 874f;
         [Tooltip("Ground-only force per unit of horizontal speed. No hard speed clamp.")]
         [Min(0f)] public float groundDrag = 50f;
         [Tooltip("Lower limit of commanded force per kg; rolling inertia still affects actual acceleration.")]
-        [Min(0f)] public float minimumDriveAcceleration = 2.5f;
+        [Min(0f)] public float minimumDriveAcceleration = 2.875f;
         [Range(0.05f, 1f)] public float massControlExponent = 0.55f;
         [Range(0f, 0.5f)] public float massSpeedExponent = 0.08f;
         [Tooltip("Cubic metres of collected snow per metre of actual surface rolling. No size cap.")]
