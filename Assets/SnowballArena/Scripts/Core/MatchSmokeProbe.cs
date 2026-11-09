@@ -79,19 +79,38 @@ namespace SnowballArena
                 for (int j = i + 1; j < match.Participants.Count; j++)
                     spaced &= Vector3.Distance(match.Participants[i].body.RigidBody.position, match.Participants[j].body.RigidBody.position) > match.Participants[i].body.Radius + match.Participants[j].body.Radius;
             if (!Check(spaced, "Sixteen participants spawn without overlap")) yield break;
-            // Let a crowded match resolve naturally. The human is deliberately idle.
+            // Safer bots are allowed long survival matches. Verify actual combat and
+            // eliminations, rather than treating a short round full of suicides as success.
+            var contacts = new List<BotContactProbe>();
+            foreach (var p in match.Participants) contacts.Add(p.body.gameObject.AddComponent<BotContactProbe>());
             Time.timeScale = 4f;
-            float elapsed = 0;
-            while (match.Phase == MatchPhase.Running && elapsed < 150)
-            { yield return new WaitForSeconds(1); elapsed++; }
+            float elapsed = 0; int previousContacts = 0;
+            bool ongoingCombat = true;
+            while (match.Phase == MatchPhase.Running && elapsed < 120)
+            {
+                yield return new WaitForSeconds(1); elapsed++;
+                if (elapsed % 30 == 0)
+                {
+                    int total = 0;
+                    foreach (var tracker in contacts) total += tracker.Contacts;
+                    ongoingCombat &= total - previousContacts >= 2;
+                    checks.Add($"Combat window: contacts={total - previousContacts}, remaining={match.Remaining}");
+                    previousContacts = total;
+                }
+            }
             checks.Add("Natural match remaining=" + match.Remaining);
-            if (match.Phase == MatchPhase.Running)
-                foreach (var p in match.Participants)
-                    if (p.alive) checks.Add($"Survivor {p.displayName}: radius={p.body.Radius:F2}, speed={p.body.RigidBody.linearVelocity.magnitude:F2}, direction={p.motor.DesiredDirection}, position={p.body.RigidBody.position}");
-            if (match.Phase == MatchPhase.Running) Capture("stalled-match.png");
-            if (!Check(match.Phase == MatchPhase.Results, "Crowded bot match reaches a natural result within 150 simulated seconds")) yield break;
-            checks.Add("Natural result after " + elapsed + " simulated seconds: " + match.Result);
-            Capture("completed-match.png");
+            int untouchedFalls = 0, totalContacts = 0;
+            for (int i = 1; i < match.Participants.Count; i++)
+            {
+                totalContacts += contacts[i].Contacts;
+                if (!match.Participants[i].alive && !contacts[i].Hit) untouchedFalls++;
+            }
+            checks.Add($"Bot contacts={totalContacts}, falls before any contact={untouchedFalls}");
+            if (!Check(contacts[0].Hit && untouchedFalls == 0 && match.Remaining < 16 &&
+                (match.Phase == MatchPhase.Results || ongoingCombat && totalContacts >= 30),
+                "Crowded bots attack the idle player and sustain real combat without unopposed suicide")) yield break;
+            checks.Add("State after " + elapsed + " simulated seconds: " + match.Phase + " " + match.Result);
+            Capture(match.Phase == MatchPhase.Results ? "completed-match.png" : "ongoing-match.png");
             Time.timeScale = 1;
             match.ReturnToMenu();
             yield return null;
