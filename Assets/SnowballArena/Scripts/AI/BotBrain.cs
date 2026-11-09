@@ -10,10 +10,15 @@ namespace SnowballArena
         public MatchController match;
         public MatchParticipant self;
         public float personality;
+        [Tooltip("Weight given to an aligned, nearby opponent close to falling off. This is a rule score, not ML training.")]
+        [Min(0f)] public float finishOpportunityWeight = 5f;
         private float nextDecision, retargetAt, blockedTime, manoeuvreUntil;
         private Vector3 manoeuvreDirection, attackOutward;
         private float targetEdgeDistance;
         private MatchParticipant target;
+        private MatchParticipant pressureTarget;
+        private Vector3 pressurePosition;
+        private float pressureProgressAt;
         private PhysicsScene physics;
 
         private void FixedUpdate()
@@ -29,7 +34,7 @@ namespace SnowballArena
             float speed = velocity.magnitude;
             // Rolling inertia reduces acceleration. Ignore helpful ground drag here so that
             // the braking estimate stays conservative as a growing snowball becomes heavy.
-            float braking = Mathf.Max(0.01f, ball.settings.driveForce / (1.4f * body.mass) * 0.9f);
+            float braking = Mathf.Max(0.01f, ball.settings.DriveForceForMass(body.mass) / (1.4f * body.mass) * 0.9f);
             float stoppingDistance = speed * speed / (2f * braking) + speed * 0.16f;
             if (speed > 0.25f && Clearance(velocity / speed, stoppingDistance + 0.6f) < stoppingDistance + 0.3f)
             {
@@ -37,7 +42,14 @@ namespace SnowballArena
                 return;
             }
 
-            if (!ValidTarget(target) || Time.fixedTime >= retargetAt)
+            bool validTarget = ValidTarget(target);
+            bool pressingAdvantage = false;
+            if (validTarget)
+            {
+                attackOutward = NearestEdge(target.body.RigidBody.position, out targetEdgeDistance);
+                pressingAdvantage = CanFinish(target, attackOutward, targetEdgeDistance);
+            }
+            if (!validTarget || !pressingAdvantage && Time.fixedTime >= retargetAt)
             {
                 retargetAt = Time.fixedTime + 2f;
                 float best = float.PositiveInfinity;
@@ -47,11 +59,15 @@ namespace SnowballArena
                     if (!ValidTarget(candidate)) continue;
                     float distance = Flat(candidate.body.RigidBody.position - position).magnitude;
                     float massRatio = candidate.body.RigidBody.mass / body.mass;
-                    NearestEdge(candidate.body.RigidBody.position, out float edgeDistance);
+                    Vector3 outward = NearestEdge(candidate.body.RigidBody.position, out float edgeDistance);
                     // Focus on opponents that can be pushed out, especially lighter balls
                     // close to an edge, instead of repeatedly duelling in the middle.
                     float score = distance * Mathf.Clamp(massRatio * massRatio, 0.5f, 2f)
                         * (0.4f + Mathf.Min(edgeDistance, 9f) * 0.15f);
+                    float alignment = Mathf.Clamp01(Vector3.Dot(Flat(candidate.body.RigidBody.position - position).normalized, outward));
+                    float gap = Mathf.Max(0f, distance - ball.Radius - candidate.body.Radius);
+                    float opportunity = Mathf.Clamp01(1f - edgeDistance / 4f) * alignment * Mathf.Clamp01(1f - gap / 5f);
+                    score /= 1f + finishOpportunityWeight * opportunity;
                     // Different opponents remain attractive to different bots; otherwise
                     // the whole field settles into identical nearest-neighbour pushing pairs.
                     score *= 0.85f + 0.3f * Mathf.Abs(Mathf.Sin(personality + match.Participants.IndexOf(candidate) * 2.3f));
@@ -59,7 +75,11 @@ namespace SnowballArena
                     if (score < best) { best = score; choice = candidate; }
                 }
                 target = choice;
-                if (target != null) attackOutward = NearestEdge(target.body.RigidBody.position, out targetEdgeDistance);
+                if (target != null)
+                {
+                    attackOutward = NearestEdge(target.body.RigidBody.position, out targetEdgeDistance);
+                    pressingAdvantage = CanFinish(target, attackOutward, targetEdgeDistance);
+                }
             }
 
             if (target == null) { DriveVelocity(Vector3.zero, velocity); return; }
@@ -75,7 +95,10 @@ namespace SnowballArena
             // Make room for another charge after a pushing stalemate. A grown ball
             // needs several seconds of real acceleration to change its approach angle.
             bool blocked = offset.magnitude < contactDistance + 0.8f && speed < 1.2f;
-            blockedTime = blocked ? blockedTime + 0.08f : 0f;
+            // Slow movement is not a stalemate when we are pinning an opponent at
+            // the edge. Commit until the opportunity disappears or self-safety requires braking.
+            if (pressingAdvantage) { manoeuvreUntil = 0; blockedTime = 0; }
+            blockedTime = blocked && !pressingAdvantage ? blockedTime + 0.08f : 0f;
             if (blockedTime > 1.2f && Time.fixedTime > manoeuvreUntil)
             {
                 float side = Mathf.Sin(personality) >= 0 ? 1f : -1f;
@@ -84,7 +107,7 @@ namespace SnowballArena
                 blockedTime = 0f;
             }
             Vector3 wanted = Time.fixedTime < manoeuvreUntil ? manoeuvreDirection : attack;
-            if (Time.fixedTime >= manoeuvreUntil && targetEdgeDistance < 8f && Vector3.Dot(attack, attackOutward) < 0.45f)
+            if (!pressingAdvantage && Time.fixedTime >= manoeuvreUntil && targetEdgeDistance < 8f && Vector3.Dot(attack, attackOutward) < 0.45f)
             {
                 Vector3 approach = target.body.RigidBody.position - attackOutward * (contactDistance + 1.2f);
                 if (SafePoint(approach))
@@ -103,20 +126,49 @@ namespace SnowballArena
                     }
                 }
             }
-            Vector3 heading = ChooseHeading(wanted);
+            // Do not divert merely because the space beyond the opponent is short.
+            // The attacker still checks its own stopping distance and ground clearance.
+            Vector3 pressureDirection = attack;
+            if (pressingAdvantage)
+            {
+                if (pressureTarget != target || Vector3.Dot(Flat(target.body.RigidBody.position - pressurePosition), attackOutward) > 0.08f)
+                {
+                    pressureTarget = target; pressurePosition = target.body.RigidBody.position; pressureProgressAt = Time.fixedTime;
+                }
+                float stalled = Time.fixedTime - pressureProgressAt;
+                if (stalled > 1f)
+                {
+                    // Two grounded spheres can lock through contact friction. Keep forward
+                    // pressure while changing the contact angle slightly; never turn away.
+                    float angle = Mathf.Sin((stalled - 1f) * 5f) * 28f;
+                    Vector3 angled = Quaternion.AngleAxis(angle, Vector3.up) * attack;
+                    if (Clearance(angled, 1f) > 0.6f) pressureDirection = angled;
+                }
+            }
+            else pressureTarget = null;
+            Vector3 heading = pressingAdvantage && Clearance(pressureDirection, 1f) > 0.6f ? pressureDirection : ChooseHeading(wanted);
             float room = Clearance(heading, 12f);
             float safeSpeed = Mathf.Sqrt(2f * braking * Mathf.Max(0f, room - 0.35f));
             // Keep driving through contact to push the opponent. Only terrain safety,
             // not distance to the opponent, reduces the commanded approach speed.
-            DriveVelocity(heading * Mathf.Min(9f, safeSpeed), velocity);
+            DriveVelocity(heading * Mathf.Min(10.5f, safeSpeed), velocity);
         }
 
         private void DriveVelocity(Vector3 desired, Vector3 velocity)
         {
             var ball = self.body;
             Vector3 force = (desired - velocity) * (ball.RigidBody.mass * 1.4f / 0.4f)
-                + velocity * ball.settings.groundDrag;
-            self.motor.SetMoveDirection(force / Mathf.Max(0.01f, ball.settings.driveForce));
+                + velocity * ball.settings.GroundDragForMass(ball.RigidBody.mass);
+            self.motor.SetMoveDirection(force / Mathf.Max(0.01f, ball.settings.DriveForceForMass(ball.RigidBody.mass)));
+        }
+
+        private bool CanFinish(MatchParticipant opponent, Vector3 outward, float edgeDistance)
+        {
+            Vector3 offset = Flat(opponent.body.RigidBody.position - self.body.RigidBody.position);
+            // A successful impact can briefly separate the balls. Keep following up
+            // instead of treating that rebound as the end of a finishing opportunity.
+            return edgeDistance <= 3.5f && offset.magnitude <= self.body.Radius + opponent.body.Radius + 3f
+                && Vector3.Dot(offset.normalized, outward) > 0.55f;
         }
 
         private Vector3 NearestEdge(Vector3 point, out float distance)

@@ -34,9 +34,9 @@ namespace SnowballArena
             Vector3 surfaceVelocity = surface != null ? surface.VelocityAt(hit.point) : Vector3.zero;
             Vector3 relativeVelocity = Vector3.ProjectOnPlane(body.linearVelocity - surfaceVelocity, hit.normal);
             // ForceMode.Force preserves mass-dependent acceleration. Never overwrite contact velocity.
-            body.AddForce(-relativeVelocity * settings.groundDrag, ForceMode.Force);
+            body.AddForce(-relativeVelocity * settings.GroundDragForMass(body.mass), ForceMode.Force);
             if (controlEnabled)
-                body.AddForce(Vector3.ProjectOnPlane(DesiredDirection, hit.normal) * settings.driveForce, ForceMode.Force);
+                body.AddForce(Vector3.ProjectOnPlane(DesiredDirection, hit.normal) * settings.DriveForceForMass(body.mass), ForceMode.Force);
         }
     }
 }

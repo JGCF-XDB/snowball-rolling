@@ -134,6 +134,22 @@ namespace SnowballArena.Editor
                 Require(Mathf.Abs(ratio - 8f) < 0.01f, "Acceleration not inverse to mass");
                 return $"Velocity-change ratio={ratio:F4} for 8:1 mass ratio";
             });
+            Check("Control remains responsive as mass grows, with lighter balls more agile", () =>
+            {
+                float previousSpeed = float.PositiveInfinity, previousTurn = float.PositiveInfinity;
+                var details = new List<string>();
+                foreach (float ratio in new[] { 1f, 4f, 16f })
+                {
+                    var current = MeasureControl(ratio, false);
+                    var old = MeasureControl(ratio, true);
+                    Require(current.speed > old.speed * 1.2f && current.turn > old.turn * 1.2f, "Control did not improve over previous fixed-force motor");
+                    Require(current.speed < previousSpeed && current.turn < previousTurn, "Heavier balls became more agile than lighter balls");
+                    Require(current.speed > 1.5f && current.turn > 0.8f, "Heavy ball loses practical control");
+                    details.Add($"{ratio:F0}x mass: 1s speed {old.speed:F2}->{current.speed:F2} m/s; 0.6s sideways response {old.turn:F2}->{current.turn:F2} m/s");
+                    previousSpeed = current.speed; previousTurn = current.turn;
+                }
+                return string.Join("; ", details);
+            });
             Check("Growth has no gameplay size cap and reset clears history", () =>
             {
                 using var world = new World(); var ball = world.Ball(Vector3.zero);
@@ -169,6 +185,30 @@ namespace SnowballArena.Editor
                 Require(Mathf.Abs(a.RigidBody.linearVelocity.x - expected) < 0.08f, "Head-on result differs from impulse solution");
             }
             return $"Relative momentum error={relativeError:E3}, v1={a.RigidBody.linearVelocity}, v2={b.RigidBody.linearVelocity}";
+        }
+
+        private static (float speed, float turn) MeasureControl(float massRatio, bool legacy)
+        {
+            using var world = new World(); world.Platform();
+            var ball = world.Ball(new Vector3(0, 0.85f, 0), 0.85f, true);
+            if (legacy)
+            {
+                // These parameters reproduce the previous constant 520 N / 40 drag model.
+                ball.settings.driveForce = 520; ball.settings.groundDrag = 40;
+                ball.settings.minimumDriveAcceleration = 0; ball.settings.massControlExponent = 1;
+                ball.settings.massSpeedExponent = 0;
+            }
+            ball.GetComponent<SphereCollider>().sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(PrototypeBuilder.Root + "/Materials/SnowContact.physicMaterial");
+            ball.Accrete(ball.Volume * (massRatio - 1), Vector3.zero, true);
+            Physics.SyncTransforms();
+            var motor = ball.GetComponent<SnowballMotor>();
+            for (int i = 0; i < 30; i++) { motor.SimulateDrive(); world.Simulate(1f / 60); }
+            motor.SetMoveDirection(Vector3.right);
+            for (int i = 0; i < 60; i++) { motor.SimulateDrive(); world.Simulate(1f / 60); }
+            float speed = ball.RigidBody.linearVelocity.x;
+            motor.SetMoveDirection(Vector3.forward);
+            for (int i = 0; i < 36; i++) { motor.SimulateDrive(); world.Simulate(1f / 60); }
+            return (speed, ball.RigidBody.linearVelocity.z);
         }
 
         private static double FeedDistance(int steps)
