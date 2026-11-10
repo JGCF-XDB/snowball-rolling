@@ -85,7 +85,8 @@ namespace SnowballArena.Editor
                 File.WriteAllText(Output + "/render-report.txt",
                     "Production warning rendered in the Unity scene; no scene saves.\n" +
                     $"Core width: approximately {CannonWarningVisual.Width * CannonWarningVisual.CoreFraction:F3} m; gradient ribbon width: {CannonWarningVisual.Width:F2} m.\n" +
-                    "Across the width: vivid red center fading naturally through pale red to a transparent edge.\n" +
+                    "Across the width: vivid red core, two-stage soft glow fading to a transparent edge.\n" +
+                    "Along the lane: low frequency energy variation, tapered ends, slow breathing and a travelling highlight.\n" +
                     $"Ground offset: {CannonWarningVisual.GroundOffset:F3} m; boundary inset: {CannonWarningVisual.BoundaryInset:F2} m; normal depth testing.\n" +
                     $"Lane start: {start}; lane end: {end}.\n");
                 Debug.Log("INFRARED WARNING REVIEW: " + Path.GetFullPath(Output));

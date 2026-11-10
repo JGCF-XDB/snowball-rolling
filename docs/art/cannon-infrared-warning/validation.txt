@@ -42,7 +42,7 @@ PASS Only one cannon before 40 seconds
 PASS At 40 seconds second cannon joins with its own full warning
 PASS Two cannons use different non-overlapping diameters
 PASS Only two cannons before 60 seconds
-60-second boundary: elapsed=60, active=3, warnings=2, thirdFlash=1
+60-second boundary: elapsed=59.9999924, active=3, warnings=2, thirdFlash=1
 PASS At 60 seconds third cannon joins with its own full warning
 PASS Player build includes the supported infrared gradient warning shader
 PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon

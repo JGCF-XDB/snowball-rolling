@@ -6,8 +6,8 @@ namespace SnowballArena
     public static class CannonWarningVisual
     {
         // The shader keeps a vivid core over 19% of the ribbon and fades from
-        // there to transparent; CoreFraction must stay in sync with the 0.19
-        // constant in CannonWarning.shader.
+        // there through a two-stage soft glow; CoreFraction must stay in sync
+        // with the 0.17..0.21 core edge in CannonWarning.shader.
         public const float CoreFraction = .19f;
         // 3x the first infrared ribbon (0.18 m).
         public const float Width = 0.54f;
@@ -30,6 +30,13 @@ namespace SnowballArena
             line.useWorldSpace = true;
             line.positionCount = 2;
             line.widthMultiplier = Width;
+            // Narrow the ribbon slightly at both ends so it melts into the snow
+            // instead of stopping on a straight cut.
+            line.widthCurve = new AnimationCurve(
+                new Keyframe(0f, .78f),
+                new Keyframe(.05f, 1f),
+                new Keyframe(.95f, 1f),
+                new Keyframe(1f, .78f));
             line.textureMode = LineTextureMode.Stretch;
             line.sharedMaterial = material;
             line.shadowCastingMode = ShadowCastingMode.Off;
