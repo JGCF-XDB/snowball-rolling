@@ -17,6 +17,8 @@ namespace SnowballArena
         internal float stageTime, travelled, angle = float.NaN;
         internal GameObject root, shot;
         internal LineRenderer warning;
+        internal LineRenderer trail;
+        internal CannonVisuals visuals;
     }
 
     public sealed class CannonDirector : MonoBehaviour
@@ -30,6 +32,7 @@ namespace SnowballArena
         public float Elapsed { get; private set; }
         public int ShotsFired { get; private set; }
         public int CycleCount { get; private set; }
+        public int ActiveEffectCount => bursts.Count;
         public IReadOnlyList<CannonState> Cannons => cannons;
         public int ActiveCannonCount => cannons.Count;
         public int ProjectileCount
@@ -55,7 +58,9 @@ namespace SnowballArena
         public bool HasProjectile => ProjectileCount > 0;
         private bool stopped;
         private readonly List<CannonState> cannons = new List<CannonState>();
-        private Material metal, orange, dark, warningMaterial;
+        private Material warningMaterial;
+        private CannonArt art;
+        private readonly List<CannonBurst> bursts = new List<CannonBurst>();
         private readonly Dictionary<MatchParticipant, Vector3> previousPositions = new Dictionary<MatchParticipant, Vector3>();
         private float NextSpawnTime => cannons.Count < 3 ? Mathf.Max(0, startAfterSeconds) + cannons.Count * Mathf.Max(0.1f, escalationInterval) : float.PositiveInfinity;
         private float Duration(CannonState c) => c.Stage == CannonStage.Warning ? Mathf.Max(0.05f, flashHalfPeriod) * 6f :
@@ -69,6 +74,8 @@ namespace SnowballArena
         public void Stop()
         {
             foreach (var c in cannons) ClearVisuals(c);
+            foreach (var burst in bursts) { burst.gameObject.SetActive(false); Destroy(burst.gameObject); }
+            bursts.Clear();
             cannons.Clear(); stopped = true;
         }
 
@@ -94,6 +101,7 @@ namespace SnowballArena
                     if (fraction < earliest) { earliest = fraction; hitCannon = c; victim = target; }
                 }
                 if (hitCannon != null) step *= earliest;
+                AdvanceEffects(step);
                 foreach (var c in cannons)
                 {
                     c.stageTime += step;
@@ -101,10 +109,15 @@ namespace SnowballArena
                     c.travelled = Mathf.Min(Vector3.Distance(c.LaneStart, c.LaneEnd), c.travelled + Mathf.Max(0.1f, projectileSpeed) * step);
                     c.ShotPosition = c.LaneStart + (c.LaneEnd - c.LaneStart).normalized * c.travelled;
                     c.shot.transform.position = c.ShotPosition;
+                    c.shot.transform.rotation = Quaternion.LookRotation((c.LaneEnd - c.LaneStart).normalized)
+                        * Quaternion.AngleAxis(c.travelled / Mathf.Max(0.01f, projectileRadius) * Mathf.Rad2Deg, Vector3.forward);
+                    c.visuals.Advance(step);
+                    UpdateTrail(c);
                 }
                 Elapsed += step; remaining -= step;
                 if (hitCannon != null)
                 {
+                    EmitImpact(hitCannon.ShotPosition, (hitCannon.LaneEnd - hitCannon.LaneStart).normalized);
                     match.Eliminate(victim, EliminationCause.Cannon);
                     if (!SpawnCannon(hitCannon)) { Stop(); break; }
                 }
@@ -121,6 +134,7 @@ namespace SnowballArena
                         int half = Mathf.FloorToInt(c.stageTime / Mathf.Max(0.05f, flashHalfPeriod));
                         c.FlashCount = Mathf.Min(3, half / 2 + 1);
                         c.warning.enabled = half < 6 && half % 2 == 0;
+                        c.visuals.SetWarning(c.warning.enabled);
                     }
                 }
                 if (stopped) break;
@@ -166,14 +180,12 @@ namespace SnowballArena
             EnsureMaterials();
             c.root = new GameObject("Cannon hazard");
             Vector3 direction = (end - start).normalized;
-            var cannon = new GameObject("Cannon"); cannon.transform.SetParent(c.root.transform);
-            cannon.transform.SetPositionAndRotation(start - Vector3.up * 0.8f, Quaternion.LookRotation(direction));
-            Piece(cannon.transform, PrimitiveType.Cube, "Base", new Vector3(0, 0.22f, -0.25f), new Vector3(1.5f, 0.44f, 1.5f), metal);
-            Piece(cannon.transform, PrimitiveType.Cylinder, "Barrel", new Vector3(0, 0.8f, -0.55f), new Vector3(0.8f, 0.65f, 0.8f), metal, Quaternion.Euler(90, 0, 0));
-            Piece(cannon.transform, PrimitiveType.Cylinder, "Muzzle", new Vector3(0, 0.8f, 0.11f), new Vector3(0.61f, 0.025f, 0.61f), dark, Quaternion.Euler(90, 0, 0));
-            Piece(cannon.transform, PrimitiveType.Cube, "Warning lamp", new Vector3(0, 1.25f, -0.7f), new Vector3(0.35f, 0.2f, 0.35f), orange);
-            for (int i = -1; i <= 1; i += 2)
-                Piece(cannon.transform, PrimitiveType.Cylinder, "Wheel", new Vector3(i * 0.83f, 0.4f, -0.45f), new Vector3(0.8f, 0.14f, 0.8f), dark, Quaternion.Euler(0, 0, 90));
+            var cannon = Instantiate(art.cannonPrefab, c.root.transform);
+            c.visuals = cannon.GetComponent<CannonVisuals>();
+            cannon.transform.localScale = Vector3.one * (projectileRadius / art.projectileRadius);
+            cannon.transform.rotation = Quaternion.LookRotation(direction);
+            cannon.transform.position = start - cannon.transform.TransformVector(c.visuals.muzzle.localPosition);
+            c.visuals.SetWarning(true);
             c.warning = new GameObject("Three-flash diameter warning").AddComponent<LineRenderer>();
             c.warning.transform.SetParent(c.root.transform); c.warning.sharedMaterial = warningMaterial;
             c.warning.useWorldSpace = true; c.warning.positionCount = 2; c.warning.widthMultiplier = projectileRadius * 2;
@@ -186,8 +198,45 @@ namespace SnowballArena
         {
             c.warning.enabled = false; c.FlashCount = 3; ShotsFired++;
             c.Stage = CannonStage.Flying; c.travelled = 0; c.ShotPosition = c.LaneStart;
-            c.shot = Piece(c.root.transform, PrimitiveType.Sphere, "Lethal cannonball", Vector3.zero, Vector3.one * projectileRadius * 2, orange);
-            c.shot.transform.position = c.ShotPosition;
+            c.shot = Instantiate(art.projectilePrefab, c.ShotPosition, Quaternion.LookRotation((c.LaneEnd - c.LaneStart).normalized), c.root.transform);
+            c.shot.transform.localScale = Vector3.one * (projectileRadius / art.projectileRadius);
+            c.visuals.Fire();
+            c.trail = new GameObject("Cannonball flight trail").AddComponent<LineRenderer>();
+            c.trail.transform.SetParent(c.root.transform, false);
+            c.trail.sharedMaterial = art.trailMaterial;
+            c.trail.useWorldSpace = true; c.trail.positionCount = 2;
+            c.trail.widthMultiplier = projectileRadius;
+            c.trail.widthCurve = AnimationCurve.Linear(0, 0, 1, 1);
+            c.trail.numCapVertices = 3;
+            UpdateTrail(c);
+        }
+
+        private void UpdateTrail(CannonState c)
+        {
+            // Derive the short tail from actual travel, so it also works when a
+            // diagnostic advances several physics steps without rendering frames.
+            float length = Mathf.Min(c.travelled, Mathf.Max(0.1f, projectileSpeed) * 0.12f);
+            Vector3 direction = (c.LaneEnd - c.LaneStart).normalized;
+            c.trail.SetPosition(0, c.ShotPosition - direction * length);
+            c.trail.SetPosition(1, c.ShotPosition);
+            c.trail.enabled = length > 0.001f;
+        }
+
+        private void EmitImpact(Vector3 point, Vector3 direction)
+        {
+            var burst = Instantiate(art.impactPrefab, point, Quaternion.LookRotation(direction), transform).GetComponent<CannonBurst>();
+            burst.transform.localScale = Vector3.one * (projectileRadius / art.projectileRadius);
+            bursts.Add(burst);
+        }
+
+        private void AdvanceEffects(float seconds)
+        {
+            for (int i = bursts.Count - 1; i >= 0; i--)
+            {
+                if (bursts[i].Advance(seconds)) continue;
+                bursts[i].gameObject.SetActive(false); Destroy(bursts[i].gameObject);
+                bursts.RemoveAt(i);
+            }
         }
 
         private float FindHit(CannonState c, float step, float fromFraction, float toFraction, out MatchParticipant firstHit)
@@ -223,38 +272,22 @@ namespace SnowballArena
 
         private void EnsureMaterials()
         {
-            if (metal != null) return;
-            metal = MakeMaterial("Cannon steel", new Color(0.12f, 0.18f, 0.23f));
-            dark = MakeMaterial("Cannon bore", new Color(0.015f, 0.02f, 0.025f));
-            orange = MakeMaterial("Cannonball glow", new Color(1f, 0.32f, 0.025f), true);
-            warningMaterial = MakeMaterial("Cannon warning", new Color(1f, 0.055f, 0.025f), true);
-        }
-        private static Material MakeMaterial(string name, Color color, bool signal = false)
-        {
-            // Lit is already referenced by the shipped arena materials, so it survives
-            // player shader stripping (unreferenced runtime-only shaders do not).
-            var template = signal ? Resources.Load<Material>("CannonSignal") : null;
-            var material = template != null ? new Material(template) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            material.name = name;
-            material.SetColor("_BaseColor", color); return material;
-        }
-        private static GameObject Piece(Transform parent, PrimitiveType type, string name, Vector3 position, Vector3 scale, Material material, Quaternion? rotation = null)
-        {
-            var item = GameObject.CreatePrimitive(type); item.name = name; item.layer = 2;
-            var collider = item.GetComponent<Collider>(); collider.enabled = false; Object.Destroy(collider);
-            item.transform.SetParent(parent, false); item.transform.localPosition = position;
-            item.transform.localScale = scale; item.transform.localRotation = rotation ?? Quaternion.identity;
-            item.GetComponent<Renderer>().sharedMaterial = material; return item;
+            if (warningMaterial != null) return;
+            art = Resources.Load<CannonArt>("CannonArt");
+            if (art == null) throw new System.InvalidOperationException("Selected cannon assets are missing. Run Rebuild Selected Cannon B.");
+            warningMaterial = new Material(Resources.Load<Material>("CannonSignal")) { name = "Cannon warning" };
+            warningMaterial.SetColor("_BaseColor", new Color(1f, 0.055f, 0.025f));
         }
         private static void ClearVisuals(CannonState c)
         {
             if (c.root != null) { c.root.SetActive(false); Destroy(c.root); }
-            c.root = c.shot = null; c.warning = null; c.Stage = CannonStage.Inactive;
+            c.root = c.shot = null; c.warning = c.trail = null; c.Stage = CannonStage.Inactive;
+            c.visuals = null;
         }
         private void OnDestroy()
         {
             Stop();
-            foreach (var material in new[] { metal, dark, orange, warningMaterial }) if (material != null) Destroy(material);
+            if (warningMaterial != null) Destroy(warningMaterial);
         }
     }
 }

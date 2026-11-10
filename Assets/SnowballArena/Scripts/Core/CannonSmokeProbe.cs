@@ -77,6 +77,8 @@ namespace SnowballArena
             for (int i = 0; i < 4; i++) Place(i, center + side * (i < 2 ? 4 : -4) + direction * (i % 2 == 0 ? 2 : -2));
             cannon.Advance(3); cannon.Advance(0.2f); Capture("cannon-projectile.png");
             Check(cannon.HasProjectile && cannon.CycleCount == 1, "Missed projectile remains alive during its flight");
+            CheckVisuals(cannon.Cannons[0]);
+            CaptureOldProjection(cannon.Cannons[0]);
             cannon.Advance(Vector3.Distance(cannon.LaneStart, cannon.LaneEnd) / cannon.projectileSpeed - 0.2f);
             Check(!cannon.HasProjectile && cannon.CycleCount == 2 && cannon.Stage == CannonStage.Warning,
                 "Missed projectile disappears only at opposite edge and cannon relocates");
@@ -113,6 +115,7 @@ namespace SnowballArena
             Check(match.Result == "练习结束" && !cannon.HasVisuals, "Practice mode also ends immediately on cannon hit");
             Setup(2); cannon.Advance(20); match.ReturnToMenu();
             Check(cannon.Elapsed == 0 && !cannon.HasVisuals && match.Participants.Count == 0, "Return to menu removes warning and resets hazards");
+            RunSelectedVisuals();
             RunEscalation();
         }
         private void CheckAngles(string name)
@@ -126,6 +129,124 @@ namespace SnowballArena
                     distinct &= angle >= 24.9f && angle <= 155.1f;
                 }
             Check(distinct, name);
+        }
+        private void CheckVisuals(CannonState state)
+        {
+            var camera = Camera.main;
+            var framing = camera.GetComponent<ArenaCamera>();
+            var backdrop = framing != null ? framing.backgroundCamera : null;
+            bool correctCamera = true;
+            foreach (var renderer in state.root.GetComponentsInChildren<Renderer>(true))
+            {
+                int mask = 1 << renderer.gameObject.layer;
+                correctCamera &= (camera.cullingMask & mask) != 0
+                    && (backdrop == null || (backdrop.cullingMask & mask) == 0);
+            }
+            Check(correctCamera, "Cannon, projectile and trail render through the gameplay camera, never the distant backdrop");
+            Vector3 viewport = camera.WorldToViewportPoint(state.shot.transform.position);
+            Check(viewport.z > camera.nearClipPlane && viewport.x > 0 && viewport.x < 1
+                && viewport.y > 0 && viewport.y < 1, "Flying cannonball projects inside the gameplay viewport");
+            Vector3 direction = (state.LaneEnd - state.LaneStart).normalized;
+            float length = Vector3.Distance(state.trail.GetPosition(0), state.trail.GetPosition(1));
+            Check(state.trail.enabled && length > 0 && length <= match.Cannon.projectileSpeed * 0.12f + 0.001f
+                && Vector3.Distance(state.trail.GetPosition(1), state.ShotPosition) < 0.001f
+                && Vector3.Dot(state.ShotPosition - state.trail.GetPosition(0), direction) > 0,
+                "Short flight trail ends at the projectile and stays behind it on the actual lane");
+            bool noColliders = true;
+            foreach (var collider in state.root.GetComponentsInChildren<Collider>()) noColliders &= !collider.enabled;
+            Check(noColliders, "Hazard visuals introduce no physical obstacles or extra collision hits");
+            var art = Resources.Load<CannonArt>("CannonArt");
+            Check(state.shot.GetComponentInChildren<MeshFilter>().sharedMesh == art.projectilePrefab.GetComponentInChildren<MeshFilter>().sharedMesh,
+                "Flying cannonball uses the selected Blender-authored ice-core mesh");
+            Check(Vector3.Distance(state.visuals.muzzle.position, state.LaneStart) < 0.001f
+                && Mathf.Abs(state.visuals.muzzleInnerDiameter * state.visuals.transform.lossyScale.x - match.Cannon.projectileRadius * 2) < 0.001f,
+                "Modeled muzzle stays at the firing origin and its inner diameter equals the projectile diameter");
+        }
+        private void RunSelectedVisuals()
+        {
+            var cannon = match.Cannon;
+            Setup(3); ParkOutside(); cannon.Advance(20);
+            var state = cannon.Cannons[0];
+            var direction = (state.LaneEnd - state.LaneStart).normalized;
+            var firingOrigin = state.LaneStart;
+            Place(1, state.LaneStart + direction * 5);
+            CaptureClose("selected-cannon-warning-close.png", state.LaneStart - direction * 1.5f - Vector3.up * 0.2f, direction);
+            cannon.Advance(0.5f);
+            Check(state.visuals.signals[0].sharedMaterial == state.visuals.signalOff, "Modeled runes turn off with the warning line");
+            cannon.Advance(0.5f);
+            Check(state.visuals.signals[0].sharedMaterial == state.visuals.signalOn, "Modeled runes turn on with the warning line");
+            cannon.Advance(2);
+            Check(state.visuals.muzzleFlash.activeSelf && Vector3.Distance(state.shot.transform.position, state.visuals.muzzle.position) < 0.001f,
+                "Selected cannon fires from the fitted muzzle with a brief flash");
+            cannon.Advance(0.04f);
+            Check(state.visuals.barrel.localPosition.z < -0.05f && state.visuals.muzzleFlash.activeSelf,
+                "Barrel recoils while the flash is visible without moving the logical firing lane");
+            CaptureClose("selected-cannon-launch-close.png", state.LaneStart - direction * 0.8f, direction);
+            cannon.Advance(0.19f);
+            Check(!match.Participants[1].alive && cannon.ActiveEffectCount == 1, "Impact removes one target and emits one decorative ice-and-ember burst");
+            cannon.Advance(0.07f);
+            CaptureClose("selected-cannon-impact-close.png", firingOrigin + direction * 3.85f, direction);
+            cannon.Advance(0.4f);
+            Check(cannon.ActiveEffectCount == 0, "Decorative impact fragments expire after their short lifetime");
+            match.ReturnToMenu();
+            Check(cannon.ActiveEffectCount == 0 && cannon.ActiveCannonCount == 0, "Menu removes selected models, muzzle flashes and decorative effects");
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--cannon-motion") >= 0) CaptureMotion();
+        }
+
+        private void CaptureMotion()
+        {
+            var cannon = match.Cannon;
+            Setup(3); ParkOutside(); cannon.Advance(20);
+            var state = cannon.Cannons[0];
+            var direction = (state.LaneEnd - state.LaneStart).normalized;
+            var side = Vector3.Cross(Vector3.up, direction);
+            var center = (state.LaneStart + state.LaneEnd) * 0.5f;
+            Place(0, center + side * 4); Place(1, state.LaneStart + direction * 8);
+            Place(2, center - side * 4); Place(3, center + side * 6 - direction * 3);
+            Directory.CreateDirectory(Path.Combine(output, "motion"));
+            for (int frame = 0; frame < 120; frame++)
+            {
+                Capture("motion/" + frame.ToString("D3") + ".png");
+                cannon.Advance(1f / 24f);
+            }
+            match.ReturnToMenu();
+        }
+
+        private void CaptureClose(string name, Vector3 target, Vector3 direction)
+        {
+            var camera = Camera.main;
+            var position = camera.transform.position; var rotation = camera.transform.rotation;
+            float fov = camera.fieldOfView;
+            try
+            {
+                camera.transform.position = target + direction * 3.8f + Vector3.Cross(Vector3.up, direction) * 3.0f + Vector3.up * 3.0f;
+                camera.transform.LookAt(target); camera.fieldOfView = 36;
+                Capture(name);
+            }
+            finally { camera.transform.SetPositionAndRotation(position, rotation); camera.fieldOfView = fov; }
+        }
+        private void CaptureOldProjection(CannonState state)
+        {
+            // Reproduce the old layer assignment at the exact same shot position,
+            // then restore it without advancing gameplay or changing the cameras.
+            var renderers = state.root.GetComponentsInChildren<MeshRenderer>();
+            var layers = new int[renderers.Length];
+            bool trailEnabled = state.trail.enabled;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                layers[i] = renderers[i].gameObject.layer;
+                renderers[i].gameObject.layer = 2;
+            }
+            try
+            {
+                state.trail.enabled = false;
+                Capture("cannon-projection-before.png");
+            }
+            finally
+            {
+                for (int i = 0; i < renderers.Length; i++) renderers[i].gameObject.layer = layers[i];
+                state.trail.enabled = trailEnabled;
+            }
         }
         private void ParkOutside()
         {
