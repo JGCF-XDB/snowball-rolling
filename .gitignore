@@ -22,6 +22,9 @@
 /docs/art/match-perspective-56.png
 /docs/art/match-perspective-preview.png
 /docs/art/match-pitch-comparison.png
+/docs/art/cannon-concepts/
+/ArtSource/CannonConcepts/
+/Tools/Art/present_cannon_concepts.py
 
 # IDE and editor metadata
 .vs/

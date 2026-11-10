@@ -1,0 +1,8 @@
+[
+  {
+    "variant": "B",
+    "cannon_meshes": 28,
+    "projectile_meshes": 12,
+    "source": "ArtSource/SelectedCannonB.blend"
+  }
+]
