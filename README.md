@@ -74,7 +74,7 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 | 菜单点击与悬停 | `UI/click1..3`、`rollover1..2` | Kenney UI Audio, CC0 |
 | 开始与倒计时 | `Interface/confirmation_001`、`tick_001` | Kenney Interface Sounds, CC0 |
 | 胜利与失败 | `Jingle/jingle_victory`（音高上行）、`jingle_defeat`（下行） | Kenney Music Jingles, CC0 |
-| 菜单 / 对局背景音乐 | `Music/menu_theme.ogg`（25 s 循环）、`Music/match_theme.ogg`（24 s 循环） | OpenGameArt, CC0 |
+| 菜单 / 对局背景音乐 | `Music/menu_theme.ogg`（25 s 循环）、`Music/match_theme.ogg`（16.6 s 循环） | OpenGameArt, CC0 |
 
 运行时结构（均为自动挂载，不需要改场景或预制体）：
 
@@ -96,7 +96,7 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 
 滚动音的音高按球半径开方反比降低，所以大球滚动更低沉。
 
-开发版音频自检：`--audio-check <输出目录>` 会写出音频子系统状态（`outputSampleRate`、驱动能力）、AudioListener 数量与所在对象、每个 clip 的时长，以及播放后 `AudioSource.time` 是否推进，用来区分“设备没出声”与“代码没调用”。实测参考值：采样率 48000、listener 在 Main Camera、撞击音 `time` 会从 0 递增。另外 `ArenaFeedback` 在启动时设 `Application.runInBackground = true`，避免窗口失焦时 Unity 自动暂停音频。背景音乐由 `ArenaFeedback.UpdateMusic` 按对局阶段切换：菜单播 `menu_theme`，倒计时与对局播 `match_theme`，结算阶段静音以突出胜负 jingle；音量 `musicVolume`（默认 0.32）与音效音量互不干扰。两条音乐的 RMS 响度接近（菜单 ~13 dB、对局 ~12 dB），切换时不会出现“突然听不见”。滚动循环音默认 `rollVolume` 0.35、`maxDistance` 38，避免多球同时滚动时盖过碰撞声。
+开发版音频自检：`--audio-check <输出目录>` 会写出音频子系统状态（`outputSampleRate`、驱动能力）、AudioListener 数量与所在对象、每个 clip 的时长，以及播放后 `AudioSource.time` 是否推进，用来区分“设备没出声”与“代码没调用”。实测参考值：采样率 48000、listener 在 Main Camera、撞击音 `time` 会从 0 递增。另外 `ArenaFeedback` 在启动时设 `Application.runInBackground = true`，避免窗口失焦时 Unity 自动暂停音频。背景音乐由 `ArenaFeedback.UpdateMusic` 按对局阶段切换：菜单播 `menu_theme`，倒计时与对局播 `match_theme`，结算阶段静音以突出胜负 jingle；音量 `musicVolume`（默认 0.32）与音效音量互不干扰。两条音乐的 RMS 响度接近（菜单 ~13 dB、对局 ~14 dB），切换时不会出现“突然听不见”。滚动循环音默认 `rollVolume` 0.35、`maxDistance` 38，避免多球同时滚动时盖过碰撞声。
 
 ## 平台扩展
 
