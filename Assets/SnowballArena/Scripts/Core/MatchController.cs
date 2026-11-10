@@ -194,9 +194,10 @@ namespace SnowballArena
             }
             else
             {
-                string hazardText = Phase == MatchPhase.Results ? $"对局 {Cannon.Elapsed:F0}s · 对局结束" : Cannon.Stage == CannonStage.Warning ? "炮击预警 · 即将发射" :
-                    Cannon.Stage == CannonStage.Flying ? "炮弹来袭 · 命中即出局" : $"对局 {Cannon.Elapsed:F0}s · 炮台 {Mathf.Max(0, Cannon.startAfterSeconds - Cannon.Elapsed):F0}s 后出现";
-                GUI.Label(new Rect(w / 2 - 170, 26, 340, 32), hazardText, label);
+                string hazardText = Phase == MatchPhase.Results ? $"对局 {Cannon.Elapsed:F0}s · 对局结束" : Cannon.ActiveCannonCount > 0 ?
+                    $"{Cannon.Elapsed:F0}s · 炮台 {Cannon.ActiveCannonCount} · 预警 {Cannon.WarningCount} / 飞行 {Cannon.ProjectileCount}" :
+                    $"对局 {Cannon.Elapsed:F0}s · 炮台 {Mathf.Max(0, Cannon.startAfterSeconds - Cannon.Elapsed):F0}s 后出现";
+                GUI.Label(new Rect(w / 2 - 180, 26, 360, 32), hazardText, label);
                 Panel(new Rect(w - 284, 22, 260, 123));
                 GUI.Label(new Rect(w - 266, 35, 235, 44), "场上剩余  " + Remaining, heading);
                 var player = Participants[0];

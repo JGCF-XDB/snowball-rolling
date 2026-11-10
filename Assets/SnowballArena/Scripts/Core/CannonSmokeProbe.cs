@@ -112,6 +112,94 @@ namespace SnowballArena
             Check(match.Result == "练习结束" && !cannon.HasVisuals, "Practice mode also ends immediately on cannon hit");
             Setup(2); cannon.Advance(20); match.ReturnToMenu();
             Check(cannon.Elapsed == 0 && !cannon.HasVisuals && match.Participants.Count == 0, "Return to menu removes warning and resets hazards");
+            RunEscalation();
+        }
+        private void CheckAngles(string name)
+        {
+            bool distinct = true;
+            var cannons = match.Cannon.Cannons;
+            for (int i = 0; i < cannons.Count; i++)
+                for (int j = i + 1; j < cannons.Count; j++)
+                {
+                    float angle = Vector3.Angle(cannons[i].LaneEnd - cannons[i].LaneStart, cannons[j].LaneEnd - cannons[j].LaneStart);
+                    distinct &= angle >= 24.9f && angle <= 155.1f;
+                }
+            Check(distinct, name);
+        }
+        private void ParkOutside()
+        {
+            for (int i = 0; i < match.Participants.Count; i++) Place(i, new Vector3(100 + i * 4, 0, 100));
+        }
+        private void RunEscalation()
+        {
+            var cannon = match.Cannon;
+            Setup(5); ParkOutside();
+            cannon.Advance(39.98f);
+            Check(cannon.ActiveCannonCount == 1, "Only one cannon before 40 seconds");
+            var first = cannon.Cannons[0];
+            cannon.Advance(0.02f);
+            Check(cannon.ActiveCannonCount == 2 && cannon.Cannons[0] == first && cannon.Cannons[1].WarningVisible
+                && cannon.Cannons[1].FlashCount == 1, "At 40 seconds second cannon joins with its own full warning");
+            CheckAngles("Two cannons use different non-overlapping diameters");
+            cannon.Advance(19.98f);
+            Check(cannon.ActiveCannonCount == 2, "Only two cannons before 60 seconds");
+            cannon.Advance(0.02f);
+            Check(cannon.ActiveCannonCount == 3 && cannon.Cannons[2].WarningVisible && cannon.Cannons[2].FlashCount == 1,
+                "At 60 seconds third cannon joins with its own full warning");
+            CheckAngles("Three cannons use different non-overlapping diameters");
+            Capture("cannon-three.png");
+            bool bounded = true, spaced = true;
+            for (int n = 0; n < 300; n++)
+            {
+                cannon.Advance(0.5f);
+                bounded &= cannon.ActiveCannonCount == 3;
+                for (int i = 0; i < 3; i++) for (int j = i + 1; j < 3; j++)
+                {
+                    float angle = Vector3.Angle(cannon.Cannons[i].LaneEnd - cannon.Cannons[i].LaneStart,
+                        cannon.Cannons[j].LaneEnd - cannon.Cannons[j].LaneStart);
+                    spaced &= angle >= 24.9f && angle <= 155.1f;
+                }
+            }
+            Check(bounded && cannon.CycleCount > 90, "Long-running repeated cycles retain exactly three cannons after 60 seconds");
+            Check(spaced, "Repeated independent relocations maintain angle separation");
+            match.ReturnToMenu();
+            Check(!cannon.HasVisuals && !cannon.HasProjectile && cannon.ActiveCannonCount == 0 && cannon.Elapsed == 0,
+                "Menu clears all three cannons, projectiles and escalation clock");
+            Setup(1); ParkOutside(); cannon.Advance(20);
+            Check(cannon.ActiveCannonCount == 1 && cannon.ShotsFired == 0, "Restart resets escalated difficulty to one cannon at 20 seconds");
+
+            // Short thresholds let all three projectiles coexist in a controlled fixture.
+            cannon.startAfterSeconds = 0; cannon.escalationInterval = 0.1f;
+            try
+            {
+                Setup(3); ParkOutside(); cannon.Advance(0.2f);
+                Check(cannon.ActiveCannonCount == 3 && cannon.WarningCount == 3 && cannon.ShotsFired == 0,
+                    "Each newly spawned cannon starts warning without an immediate shot");
+                var a = cannon.Cannons[0]; var b = cannon.Cannons[1]; var c = cannon.Cannons[2];
+                Place(0, a.LaneStart + (a.LaneEnd - a.LaneStart).normalized * 6);
+                Place(1, c.LaneStart + (c.LaneEnd - c.LaneStart).normalized * 2);
+                cannon.Advance(2.8f); cannon.Advance(0.2f);
+                Check(cannon.ProjectileCount == 3 && cannon.ShotsFired == 3,
+                    "Three independent cannons each complete three flashes and fire one projectile");
+                var otherOrigin = b.LaneStart;
+                cannon.Advance(0.2f);
+                Check(!match.Participants[0].alive && !match.Participants[1].alive
+                    && match.Participants[2].alive && match.Participants[3].alive,
+                    "Concurrent projectiles each eliminate their first target only");
+                Check(!a.HasProjectile && !c.HasProjectile && a.Stage == CannonStage.Warning && c.Stage == CannonStage.Warning
+                    && b.HasProjectile && b.LaneStart == otherOrigin,
+                    "Hit cannons relocate independently while an unaffected projectile keeps flying");
+                CheckAngles("Post-impact relocations still avoid both other cannon diameters");
+                match.Eliminate(match.Participants[2], EliminationCause.Cannon);
+                // Bring the surviving participant back onto the platform for victory.
+                Place(3, Vector3.zero); match.ResolveEliminations();
+                Check(match.Phase == MatchPhase.Results && cannon.ActiveCannonCount == 0 && !cannon.HasProjectile,
+                    "Victory clears all simultaneous warnings and projectiles");
+                int shots = cannon.ShotsFired; cannon.Advance(120);
+                Check(cannon.ShotsFired == shots && cannon.ActiveCannonCount == 0,
+                    "Finished match cannot escalate or fire further shots");
+            }
+            finally { cannon.startAfterSeconds = 20; cannon.escalationInterval = 20; }
         }
         private void Setup(int bots) { match.StartMatch(bots); match.BeginRunning(); Freeze(); }
         private void Freeze()
