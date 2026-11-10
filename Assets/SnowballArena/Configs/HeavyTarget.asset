@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.SnowballSettings
   initialRadius: 1.275
   density: 25
+  massGrowthExponent: 1.1
   driveForce: 1573.2
   groundDrag: 50
   minimumDriveAcceleration: 7.2

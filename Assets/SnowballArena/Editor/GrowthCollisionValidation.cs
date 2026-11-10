@@ -172,6 +172,15 @@ namespace SnowballArena.Editor
                 }
                 return string.Join("; ", details);
             });
+            Check("Grown mass bonus strengthens impact with conserved momentum and no collision energy gain", () =>
+            {
+                var baseline = MeasureGrownImpact(1f);
+                var boosted = MeasureGrownImpact(1.1f);
+                Require(boosted.mass > baseline.mass * 1.14f && boosted.mass < baseline.mass * 1.16f, "Unexpected four-volume mass bonus");
+                Require(boosted.targetSpeed > baseline.targetSpeed && boosted.attackerSpeed > baseline.attackerSpeed,
+                    "Heavy attacker did not transfer more speed and retain more forward velocity");
+                return $"Same size and 10 m/s approach: mass {baseline.mass:F2}->{boosted.mass:F2} kg, target {baseline.targetSpeed:F2}->{boosted.targetSpeed:F2} m/s, attacker {baseline.attackerSpeed:F2}->{boosted.attackerSpeed:F2} m/s";
+            });
             Check("Growth has no gameplay size cap and reset clears history", () =>
             {
                 using var world = new World(); var ball = world.Ball(Vector3.zero);
@@ -235,9 +244,10 @@ namespace SnowballArena.Editor
                 ball.settings.driveForce = 520; ball.settings.groundDrag = 40;
                 ball.settings.minimumDriveAcceleration = 0; ball.settings.massControlExponent = 1;
                 ball.settings.massSpeedExponent = 0;
+                ball.settings.massGrowthExponent = 1f;
             }
             ball.GetComponent<SphereCollider>().sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(PrototypeBuilder.Root + "/Materials/SnowContact.physicMaterial");
-            ball.Accrete(ball.Volume * (massRatio - 1), Vector3.zero, true);
+            ball.Accrete(ball.Volume * (Math.Pow(massRatio, 1d / ball.settings.massGrowthExponent) - 1d), Vector3.zero, true);
             Physics.SyncTransforms();
             var motor = ball.GetComponent<SnowballMotor>();
             for (int i = 0; i < 30; i++) { motor.SimulateDrive(); world.Simulate(1f / 60); }
@@ -247,6 +257,24 @@ namespace SnowballArena.Editor
             motor.SetMoveDirection(Vector3.forward);
             for (int i = 0; i < 36; i++) { motor.SimulateDrive(); world.Simulate(1f / 60); }
             return (speed, ball.RigidBody.linearVelocity.z);
+        }
+
+        private static (float mass, float targetSpeed, float attackerSpeed) MeasureGrownImpact(float exponent)
+        {
+            using var world = new World();
+            var a = world.Ball(new Vector3(-4, 5, 0)); var b = world.Ball(new Vector3(0, 5, 0));
+            a.settings.massGrowthExponent = exponent;
+            a.Accrete(a.Volume * 3, Vector3.zero, false);
+            var contact = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.BallMaterialPath);
+            a.GetComponent<SphereCollider>().sharedMaterial = contact; b.GetComponent<SphereCollider>().sharedMaterial = contact;
+            a.RigidBody.linearVelocity = Vector3.right * 10;
+            float mass = a.RigidBody.mass, initialMomentum = mass * 10, initialEnergy = mass * 100;
+            for (int i = 0; i < 120; i++) world.Simulate(1f / 120);
+            Vector3 momentum = mass * a.RigidBody.linearVelocity + b.RigidBody.mass * b.RigidBody.linearVelocity;
+            float energy = mass * a.RigidBody.linearVelocity.sqrMagnitude + b.RigidBody.mass * b.RigidBody.linearVelocity.sqrMagnitude;
+            Require((momentum - Vector3.right * initialMomentum).magnitude < initialMomentum * 0.001f, "Mass bonus broke collision momentum conservation");
+            Require(energy <= initialEnergy * 1.001f, "Mass bonus collision created energy");
+            return (mass, b.RigidBody.linearVelocity.x, a.RigidBody.linearVelocity.x);
         }
 
         private static double FeedDistance(int steps)
