@@ -88,7 +88,7 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 | 炮台部署 | `Cannon/cannon_deploy.ogg` | Kenney Impact Sounds（impactMetal_heavy）, CC0 |
 | 发射前预警 | `Cannon/cannon_warning.wav`（0.2 s，880 Hz，每次闪烁升高音高） | 本项目生成 |
 | 炮击 | `Cannon/cannon_fire.wav`（1.20 s，真实加农炮录音） | OpenGameArt「Cannon fire」by Thimras, CC0 |
-| 炮弹飞行 | `Cannon/cannon_flight.wav`（0.62 s，迫击炮弹哨音上升） | 本项目生成 |
+| 炮弹飞行 | `Cannon/cannon_flight.wav`（0.62 s，重石弹低频掠过） | 本项目生成 |
 | 炮弹命中爆炸 | `Cannon/cannon_explosion.wav`（1.55 s，低频轰 + 尾音） | OpenGameArt「2 High Quality Explosions」by Michel Baradari, **CC-BY 3.0（需署名）** |
 | 玩家击落奖励 | `Reward/knockdown.wav`（A5→E6 上行双音） | 本项目生成 |
 
