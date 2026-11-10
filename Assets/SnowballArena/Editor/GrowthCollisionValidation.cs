@@ -46,7 +46,9 @@ namespace SnowballArena.Editor
                 var ground = new GameObject("Ground") { layer = 8 };
                 SceneManager.MoveGameObjectToScene(ground, scene);
                 var collider = ground.AddComponent<BoxCollider>();
-                collider.size = new Vector3(200, 2, 200); collider.center = Vector3.down;
+                // Keep the long high-speed rolling test away from fixture edges.
+                // Falling off the gameplay platform has its own validation case.
+                collider.size = new Vector3(1000, 2, 1000); collider.center = Vector3.down;
                 var material = new PhysicsMaterial("Rolling contact") { staticFriction = 0.5f, dynamicFriction = 0.5f };
                 transientAssets.Add(material); collider.sharedMaterial = material;
                 Physics.SyncTransforms();
@@ -121,7 +123,7 @@ namespace SnowballArena.Editor
                 motor.SetMoveDirection(Vector3.right);
                 for (int i = 0; i < 480; i++) { growth.SampleStep(1f / 60); motor.SimulateDrive(); world.Simulate(1f / 60); }
                 Require(ball.Radius > 0.8f && growth.RolledDistance > 3, "Real rolling did not grow");
-                Require(Mathf.Abs(ball.RigidBody.position.y - ball.Radius) < 0.1f, "Growth sank into or launched from ground");
+                Require(Mathf.Abs(ball.RigidBody.position.y - ball.Radius) < 0.1f, $"Growth left ground: position={ball.RigidBody.position}, radius={ball.Radius:F3}");
                 return $"Radius={ball.Radius:F3}, rolled={growth.RolledDistance:F3} m, ground error={ball.RigidBody.position.y - ball.Radius:F4}";
             });
             Check("Larger mass responds less to the same force", () =>

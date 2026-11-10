@@ -151,7 +151,7 @@ namespace SnowballArena
             float safeSpeed = Mathf.Sqrt(2f * braking * Mathf.Max(0f, room - 0.35f));
             // Keep driving through contact to push the opponent. Only terrain safety,
             // not distance to the opponent, reduces the commanded approach speed.
-            DriveVelocity(heading * Mathf.Min(10.5f, safeSpeed), velocity);
+            DriveVelocity(heading * Mathf.Min(18.9f, safeSpeed), velocity);
         }
 
         private void DriveVelocity(Vector3 desired, Vector3 velocity)
