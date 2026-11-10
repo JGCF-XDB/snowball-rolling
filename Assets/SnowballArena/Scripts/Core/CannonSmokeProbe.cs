@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace SnowballArena
 {
@@ -226,12 +227,16 @@ namespace SnowballArena
         }
         private void Capture(string name)
         {
-            var camera = Camera.main; var previous = RenderTexture.active; var target = new RenderTexture(1280, 720, 24);
-            camera.targetTexture = target; camera.Render(); RenderTexture.active = target;
+            var camera = Camera.main;
+            var framing = camera.GetComponent<ArenaCamera>();
+            if (framing != null) camera = framing.RenderRoot;
+            var previous = RenderTexture.active; var target = new RenderTexture(1280, 720, 24);
+            RenderPipeline.SubmitRenderRequest(camera, new RenderPipeline.StandardRequest { destination = target });
+            RenderTexture.active = target;
             var image = new Texture2D(1280, 720, TextureFormat.RGB24, false);
             image.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0); image.Apply();
             File.WriteAllBytes(Path.Combine(output, name), image.EncodeToPNG());
-            camera.targetTexture = null; RenderTexture.active = previous; Destroy(image); Destroy(target);
+            RenderTexture.active = previous; Destroy(image); Destroy(target);
         }
     }
 }
