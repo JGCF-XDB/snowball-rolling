@@ -96,7 +96,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4a5a4a611c90aa64b9a9e2a0ecd426e4, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.SnowballBody
   settings: {fileID: 11400000, guid: 84b84646531139d4cac6bc80b2410ff2, type: 2}
   visual: {fileID: 6897358006987380061}
@@ -110,7 +110,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b4ceaf6c5834b6343ad55d932bca0556, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.SnowballMotor
   supportLayers:
     serializedVersion: 2
@@ -126,7 +126,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1341f02994e9ad945afcf5f512beb143, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.PlayerInputSource
   controls: {fileID: -944628639613478452, guid: ad7a940f963b11c47ae6460ecdc5cf87, type: 3}
   cameraFrame: {fileID: 0}
@@ -140,7 +140,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45ff5d6edba5b444c958065378653301, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.SnowballGrowth
 --- !u!1 &6022459764777401065
 GameObject:
@@ -182,7 +182,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6022459764777401065}
-  m_Mesh: {fileID: 4300000, guid: 3498b53176171cf4ea8de5761ac90c93, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 3b85529817516f64c9725502f23b1a61, type: 2}
 --- !u!23 &6720049804882008185
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -208,8 +208,8 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 958ff9c64a2dc4d4d8076179ce1ece97, type: 2}
-  - {fileID: 2100000, guid: 1ff31bcf139b9ec4b9ffa39b66094bc7, type: 2}
+  - {fileID: 2100000, guid: e44876dee75c5f94ba867123117dff86, type: 2}
+  - {fileID: 2100000, guid: 553357468750bd44a831c73f648b2ec1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

@@ -36,3 +36,18 @@
 积雪、压实雪球、冰和岩石需要区分 PBR 材质表现：雪偏柔软哑光，雪球更紧实，冰有适度透光感，岩石保持粗粝的块面。以清晰轮廓和大切面为主，避免用密集几何堆叠微小颗粒。
 
 建模交付时分别组织平台结构、外围环境模块与雪球模型，保持统一单位、比例和材质命名。二维设定图用于确定美术方向，平台尺寸、碰撞与出生安全范围需在实际 Unity 场景中核对。
+
+## 游戏内模型
+
+正式场景为 [`Match.unity`](../../Assets/SnowballArena/Scenes/Match.unity)。已根据设定图重建可直接运行的程序化 3D 网格，并保存为 Unity 原生资源：
+
+![正式对局中滚动和成长的雪球与雪山环境](gameplay-preview.png)
+
+- [`ReferencePlatform.asset`](../../Assets/SnowballArena/Art/ReferencePlatform.asset)：22 m 雪台的积雪、冰层、岩层与垂挂冰晶；玩法碰撞仍使用独立的平坦平台网格。
+- [`ReferenceSnowball.asset`](../../Assets/SnowballArena/Art/ReferenceSnowball.asset)：单位直径的低多边形雪球，卷雪螺旋带、雪块和冰晶合并在同一个网格中，使用两种材质。由现有 `SnowballBody` 随半径缩放。
+- [`SnowCedar.prefab`](../../Assets/SnowballArena/Prefabs/SnowCedar.prefab)、[`FloatingIslet.prefab`](../../Assets/SnowballArena/Prefabs/FloatingIslet.prefab) 和 `SnowMountain0/1/2.prefab`：可复用的外围环境模块，均不带玩法碰撞体。
+- [`ReferenceMeshes.cs`](../../Assets/SnowballArena/Editor/ReferenceMeshes.cs)：确定性的网格构造代码；[`ModelingReferenceBuilder.cs`](../../Assets/SnowballArena/Editor/ModelingReferenceBuilder.cs)：材质、预制体、正式场景和预览图的生成入口。
+
+在 Unity 中执行 `Snowball Arena > Apply Modeling Reference` 可重新生成。它会更新上述生成资源与正式对局中的美术对象；再次执行会替换已有生成内容，资源 GUID 保持稳定。调整生成后的资源前，可先另存为独立资产以保留手工修改。
+
+批处理入口 `SnowballArena.Editor.ModelingReferenceBuilder.ApplyAndBuild` 会生成资源、检查碰撞网格与出生位置、执行现有物理验证并构建 `Builds/Windows/SnowballArena.exe`。预览与检查报告输出到被 Git 忽略的 `TestResults/ModelingReference`。

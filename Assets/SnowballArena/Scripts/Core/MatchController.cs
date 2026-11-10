@@ -90,10 +90,14 @@ namespace SnowballArena
                     input.enabled = false;
                     var brain = instance.AddComponent<BotBrain>();
                     brain.match = this; brain.self = participant; brain.personality = i * 1.731f;
-                    var material = new Material(instance.GetComponentInChildren<MeshRenderer>().sharedMaterial);
-                    material.SetColor("_BaseColor", Color.HSVToRGB((i * 0.618034f) % 1f, 0.62f, 0.95f));
-                    ownedMaterials.Add(material);
-                    instance.GetComponentInChildren<MeshRenderer>().sharedMaterials = new[] { material, material };
+                    var renderer = instance.GetComponentInChildren<MeshRenderer>();
+                    float hue = 0.47f + (i * 0.618034f % 1f) * 0.19f;
+                    var snow = new Material(renderer.sharedMaterials[0]);
+                    var packedSnow = new Material(renderer.sharedMaterials[1]);
+                    snow.SetColor("_BaseColor", Color.HSVToRGB(hue, 0.28f, 0.94f));
+                    packedSnow.SetColor("_BaseColor", Color.HSVToRGB(hue, 0.56f, 0.76f));
+                    ownedMaterials.Add(snow); ownedMaterials.Add(packedSnow);
+                    renderer.sharedMaterials = new[] { snow, packedSnow };
                 }
                 motor.controlEnabled = false;
                 instance.GetComponent<SnowballGrowth>().enabled = false;
