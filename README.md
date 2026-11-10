@@ -4,14 +4,14 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 
 ## 运行
 
-双击 `Builds/Windows/SnowballArena.exe`，点击游戏窗口使其获得键盘焦点。必须保留同目录的 Data、MonoBleedingEdge 等运行依赖，不要只复制 exe。
+本轮美术试玩版位于 `Builds/ConceptPreview/SnowballArena.exe`，原测试包位于 `Builds/Windows/SnowballArena.exe`。点击游戏窗口使其获得键盘焦点。必须保留同目录的 Data、MonoBleedingEdge 等运行依赖，不要只复制 exe。
 
 在 Unity 中打开 `Assets/SnowballArena/Scenes/Match.unity` 后点击 Play。原模板 SampleScene 和物理练习场 Arena 都保留。
 
 ## 操作
 
 - 主菜单：← / → 选择 0～15 个机器人，Enter 开始；也可以点击加减按钮。
-- 比赛：WASD 控制白色雪球；斜向输入归一化。雪球按镜头方向移动，具有惯性。
+- 比赛：WASD 控制红色描边的白色雪球；斜向输入归一化。雪球按镜头方向移动，具有惯性。
 - Esc：返回菜单。
 - 出局或结算后：R 重新开始；玩家出局后其余雪球继续比赛，可观战。
 - 0 个机器人：自由练习，掉落后结算。
@@ -37,9 +37,9 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 
 [雪山竞技场与雪球建模设定](docs/art/README.md)包含环境多视图、模块拆分、雪球多视图与成长阶段，以及建模要求和生成提示词。
 
-正式对局已接入按设定图制作的程序化低多边形模型：三层浮空雪台、半透明冰层与冰晶边缘、雪松小岛、分层雪山，以及带卷雪螺旋纹、雪块和冰晶颗粒的雪球。白色雪球是玩家，对手使用冷色积雪与较深的雪带，便于辨认。模型随物理滚动并按成长半径同步缩放。
+正式对局已接入 Blender 制作的低多边形模型：三层浮空雪台、半透明冰层与冰晶边缘、分枝雪松、带主副峰和山脊的雪山，以及带卷雪螺旋纹、雪块和冰晶颗粒的雪球。玩家为红色描边的白色雪球，对手使用黄、绿、蓝、紫、橙等描边与浅色雪带区分。模型随物理滚动并按成长半径同步缩放。平台与雪球采用约 47° 的比赛视角，远山、外围小岛和云雾保持约 20° 的背景视角，两者独立取景。
 
-菜单 `Snowball Arena > Apply Modeling Reference` 重新生成网格、材质、环境模块预制体并更新正式对局场景；随后使用 `Build Windows Game` 打包试玩。
+可编辑模型源文件为 `ArtSource/SnowArenaConcept.blend`，确定性建模与 FBX 导出脚本为 `Tools/Art/build_concept_assets.py`。用 Blender 4.5 LTS 执行该脚本后，菜单 `Snowball Arena > Apply Modeling Reference` 导入网格、生成材质与模块预制体并更新正式对局场景；随后使用 `Build Windows Game` 打包试玩。批处理 `ModelingReferenceBuilder.BuildConceptPreview` 验证并构建开发版供 smoke 测试；`BuildPlayablePreview` 输出同路径的普通试玩包，无开发调试连接。
 
 ## 调参
 

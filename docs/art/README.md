@@ -39,15 +39,21 @@
 
 ## 游戏内模型
 
-正式场景为 [`Match.unity`](../../Assets/SnowballArena/Scenes/Match.unity)。已根据设定图重建可直接运行的程序化 3D 网格，并保存为 Unity 原生资源：
+正式场景为 [`Match.unity`](../../Assets/SnowballArena/Scenes/Match.unity)。根据设定图制作的 Blender 模型通过 FBX 导入，并烘焙为保留面法线、顶点色和材质分区的 Unity 原生资源：
 
 ![正式对局中滚动和成长的雪球与雪山环境](gameplay-preview.png)
 
 - [`ReferencePlatform.asset`](../../Assets/SnowballArena/Art/ReferencePlatform.asset)：22 m 雪台的积雪、冰层、岩层与垂挂冰晶；玩法碰撞仍使用独立的平坦平台网格。
 - [`ReferenceSnowball.asset`](../../Assets/SnowballArena/Art/ReferenceSnowball.asset)：单位直径的低多边形雪球，卷雪螺旋带、雪块和冰晶合并在同一个网格中，使用两种材质。由现有 `SnowballBody` 随半径缩放。
 - [`SnowCedar.prefab`](../../Assets/SnowballArena/Prefabs/SnowCedar.prefab)、[`FloatingIslet.prefab`](../../Assets/SnowballArena/Prefabs/FloatingIslet.prefab) 和 `SnowMountain0/1/2.prefab`：可复用的外围环境模块，均不带玩法碰撞体。
-- [`ReferenceMeshes.cs`](../../Assets/SnowballArena/Editor/ReferenceMeshes.cs)：确定性的网格构造代码；[`ModelingReferenceBuilder.cs`](../../Assets/SnowballArena/Editor/ModelingReferenceBuilder.cs)：材质、预制体、正式场景和预览图的生成入口。
+- [`SnowArenaConcept.blend`](../../ArtSource/SnowArenaConcept.blend)：可编辑模型源文件；[`build_concept_assets.py`](../../Tools/Art/build_concept_assets.py)：Blender 4.5 LTS 确定性建模与 FBX 导出脚本。运行方式：`blender --background --factory-startup --python Tools/Art/build_concept_assets.py -- <项目绝对路径>`。
+- [`ReferenceMeshes.cs`](../../Assets/SnowballArena/Editor/ReferenceMeshes.cs)：导入并校验 FBX 的轴向、面法线、顶点色及材质顺序；[`ModelingReferenceBuilder.cs`](../../Assets/SnowballArena/Editor/ModelingReferenceBuilder.cs)：材质、预制体、正式场景和预览图的生成入口。
+- [`ConceptAssetStudio.cs`](../../Assets/SnowballArena/Editor/ConceptAssetStudio.cs)：在临时场景中渲染平台、雪球、雪松、雪山和组合预览，不改写正式场景或玩法预制体。
 
 在 Unity 中执行 `Snowball Arena > Apply Modeling Reference` 可重新生成。它会更新上述生成资源与正式对局中的美术对象；再次执行会替换已有生成内容，资源 GUID 保持稳定。调整生成后的资源前，可先另存为独立资产以保留手工修改。
 
-批处理入口 `SnowballArena.Editor.ModelingReferenceBuilder.ApplyAndBuild` 会生成资源、检查碰撞网格与出生位置、执行现有物理验证并构建 `Builds/Windows/SnowballArena.exe`。预览与检查报告输出到被 Git 忽略的 `TestResults/ModelingReference`。
+积雪覆盖与枝叶分别建模，露出深绿色枝梢与树干；雪山包含不规则主副峰、折面山脊、带厚度的雪顶和下方裸岩山脊。雪球通过独立描边与浅色雪带区分身份，玩家描边为红色。
+
+平台与雪球按 reference 视频使用约 47° 俯视；远山、外围小岛和云雾保持约 20° 背景取景。URP 通过 Forward 相机堆叠合成，平台物理表面保持水平。云雾由带深度交界柔化的透明云片和高度雾组合：[`ValleyCloud.blend`](../../ArtSource/ValleyCloud.blend) 保留体积云源文件，[`bake_valley_cloud.py`](../../Tools/Art/bake_valley_cloud.py) 用 Cycles 烘焙带透明度的云纹理。
+
+批处理入口 `SnowballArena.Editor.ModelingReferenceBuilder.ApplyAndBuild` 会导入资源、检查碰撞网格与出生位置、执行现有物理验证并构建 `Builds/Windows/SnowballArena.exe`。`BuildConceptPreview` 验证当前场景并构建 `Builds/ConceptPreview/SnowballArena.exe` 开发包，`BuildPlayablePreview` 输出同路径的普通试玩包；`ConceptAssetStudio.Render` 生成独立单体预览。预览与资源检查报告输出到被 Git 忽略的 `TestResults/ConceptMatch`。

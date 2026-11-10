@@ -1,4 +1,6 @@
 * text=auto
+.gitattributes text eol=lf
+*.asmdef text eol=lf
 *.cs text eol=lf
 *.md text eol=lf
 *.unity text eol=lf
@@ -6,3 +8,7 @@
 *.asset text eol=lf
 *.mat text eol=lf
 *.meta text eol=lf
+*.py text eol=lf
+*.shader text eol=lf
+*.fbx binary
+*.blend binary
