@@ -12,6 +12,17 @@
 [Bb]uilds/
 [Tt]est[Rr]esults/
 
+# Local art explorations and camera/layout comparisons
+/docs/art/alpine-layouts-60/
+/docs/art/alpine-layouts-shared-60/
+/docs/art/alpine-sculpted-60/
+/docs/art/knockout-concepts/
+/docs/art/alpine-arena-preview.png
+/docs/art/alpine-reference-panorama.png
+/docs/art/match-perspective-56.png
+/docs/art/match-perspective-preview.png
+/docs/art/match-pitch-comparison.png
+
 # IDE and editor metadata
 .vs/
 .vscode/
