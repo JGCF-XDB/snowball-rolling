@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace SnowballArena
 {
@@ -144,6 +145,7 @@ namespace SnowballArena
             cannon.Advance(19.98f);
             Check(cannon.ActiveCannonCount == 2, "Only two cannons before 60 seconds");
             cannon.Advance(0.02f);
+            checks.Add($"60-second boundary: elapsed={cannon.Elapsed:R}, active={cannon.ActiveCannonCount}, warnings={cannon.WarningCount}, thirdFlash={(cannon.ActiveCannonCount > 2 ? cannon.Cannons[2].FlashCount : -1)}");
             Check(cannon.ActiveCannonCount == 3 && cannon.Cannons[2].WarningVisible && cannon.Cannons[2].FlashCount == 1,
                 "At 60 seconds third cannon joins with its own full warning");
             CheckAngles("Three cannons use different non-overlapping diameters");
@@ -226,12 +228,16 @@ namespace SnowballArena
         }
         private void Capture(string name)
         {
-            var camera = Camera.main; var previous = RenderTexture.active; var target = new RenderTexture(1280, 720, 24);
-            camera.targetTexture = target; camera.Render(); RenderTexture.active = target;
+            var camera = Camera.main;
+            var framing = camera.GetComponent<ArenaCamera>();
+            if (framing != null) camera = framing.RenderRoot;
+            var previous = RenderTexture.active; var target = new RenderTexture(1280, 720, 24);
+            RenderPipeline.SubmitRenderRequest(camera, new RenderPipeline.StandardRequest { destination = target });
+            RenderTexture.active = target;
             var image = new Texture2D(1280, 720, TextureFormat.RGB24, false);
             image.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0); image.Apply();
             File.WriteAllBytes(Path.Combine(output, name), image.EncodeToPNG());
-            camera.targetTexture = null; RenderTexture.active = previous; Destroy(image); Destroy(target);
+            RenderTexture.active = previous; Destroy(image); Destroy(target);
         }
     }
 }

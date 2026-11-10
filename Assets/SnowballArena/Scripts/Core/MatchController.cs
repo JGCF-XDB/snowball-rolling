@@ -31,7 +31,6 @@ namespace SnowballArena
         public string Notice { get; private set; }
         public float Countdown { get; private set; }
         public CannonDirector Cannon { get; private set; }
-        private readonly List<Material> ownedMaterials = new List<Material>();
         private int lastCountdownSecond = -1;
         private GUIStyle title, heading, label, small, button;
         private Font font;
@@ -83,6 +82,7 @@ namespace SnowballArena
                 var motor = instance.GetComponent<SnowballMotor>();
                 var participant = new MatchParticipant { body = body, motor = motor, isPlayer = i == 0, displayName = i == 0 ? "你" : "雪球 " + i };
                 Participants.Add(participant);
+                instance.GetComponent<SnowballAppearance>()?.SetIdentity(i);
                 var input = instance.GetComponent<PlayerInputSource>();
                 if (i == 0) input.cameraFrame = arenaCamera.transform;
                 else
@@ -90,10 +90,6 @@ namespace SnowballArena
                     input.enabled = false;
                     var brain = instance.AddComponent<BotBrain>();
                     brain.match = this; brain.self = participant; brain.personality = i * 1.731f;
-                    var material = new Material(instance.GetComponentInChildren<MeshRenderer>().sharedMaterial);
-                    material.SetColor("_BaseColor", Color.HSVToRGB((i * 0.618034f) % 1f, 0.62f, 0.95f));
-                    ownedMaterials.Add(material);
-                    instance.GetComponentInChildren<MeshRenderer>().sharedMaterials = new[] { material, material };
                 }
                 motor.controlEnabled = false;
                 instance.GetComponent<SnowballGrowth>().enabled = false;
@@ -168,8 +164,6 @@ namespace SnowballArena
             foreach (var participant in Participants)
                 if (participant.body != null) { participant.body.gameObject.SetActive(false); Destroy(participant.body.gameObject); }
             Participants.Clear(); Remaining = 0;
-            foreach (var material in ownedMaterials) Destroy(material);
-            ownedMaterials.Clear();
         }
 
         private void OnGUI()
@@ -198,7 +192,7 @@ namespace SnowballArena
                 GUI.Label(new Rect(r.x + 116, r.y + 178, 210, 44), botCount == 0 ? "0  ·  自由练习" : botCount + "  位对手", heading);
                 if (GUI.Button(new Rect(r.x + 368, r.y + 176, 60, 44), "+", button)) { botCount = Mathf.Min(15, botCount + 1); Click(); }
                 if (GUI.Button(new Rect(r.x + 32, r.y + 245, 396, 48), "开始游戏  ·  Enter", button)) StartMatch(botCount);
-                GUI.Label(new Rect(r.x + 32, r.y + 313, 410, 30), Notice ?? "← → 调整人数    WASD 控制白色雪球", small);
+                GUI.Label(new Rect(r.x + 32, r.y + 313, 410, 30), Notice ?? "← → 调整人数    WASD 控制红色描边雪球", small);
             }
             else
             {
@@ -210,7 +204,7 @@ namespace SnowballArena
                 GUI.Label(new Rect(w - 266, 35, 235, 44), "场上剩余  " + Remaining, heading);
                 var player = Participants[0];
                 GUI.Label(new Rect(w - 266, 78, 235, 27), $"半径 {player.body.Radius:F2} m  ·  {player.body.RigidBody.mass:F0} kg", small);
-                GUI.Label(new Rect(w - 266, 109, 235, 27), player.alive ? "白色雪球是你" : Notice == "你被炮弹击中" ? "炮弹命中，观战中" : "你已出局，观战中", small);
+                GUI.Label(new Rect(w - 266, 109, 235, 27), player.alive ? "红色描边雪球是你" : Notice == "你被炮弹击中" ? "炮弹命中，观战中" : "你已出局，观战中", small);
                 Panel(new Rect(24, h - 76, 550, 52));
                 GUI.Label(new Rect(44, h - 63, 520, 30), "WASD 移动   ·   Esc 返回菜单   ·   出局后 R 重开", small);
                 if (Phase != MatchPhase.Results && GUI.Button(new Rect(w - 230, h - 72, 206, 42), "返回菜单  ·  Esc", button)) ReturnToMenu();
@@ -237,6 +231,6 @@ namespace SnowballArena
             Color previous = GUI.color; GUI.color = new Color(0.025f, 0.08f, 0.12f, 0.94f); GUI.DrawTexture(r, Texture2D.whiteTexture);
             GUI.color = new Color(0.35f, 0.88f, 0.96f); GUI.DrawTexture(new Rect(r.x, r.y, 3, r.height), Texture2D.whiteTexture); GUI.color = previous;
         }
-        private void OnDestroy() { if (font != null) Destroy(font); foreach (var material in ownedMaterials) if (material != null) Destroy(material); }
+        private void OnDestroy() { if (font != null) Destroy(font); }
     }
 }
