@@ -80,6 +80,33 @@ namespace SnowballArena.Editor
             Check("Elastic gameplay contact transfers speed between equal masses", () => Collision(0.65f, 0f, true, true));
             Check("Fast attacker rebounds from heavier opponent with conserved momentum", () => Collision(1f, 0f, true, true));
             Check("Lighter opponent receives greater speed without extra energy", () => Collision(0.45f, 0f, true, true));
+            Check("Cannon lanes act as kill corridors bots step out of", () =>
+            {
+                Vector3 start = new Vector3(-11f, 0f, 0f), end = new Vector3(11f, 0f, 0f);
+                const float radius = 0.85f, projectile = 0.3f, margin = 0.9f;
+                Require(BotBrain.IsInLanePath(new Vector3(0f, radius, 0.4f), radius, projectile, margin,
+                    start, end, false, Vector3.zero, out Vector3 escape), "Ball standing on the lane was not flagged");
+                Require(Mathf.Abs(Vector3.Dot(escape, Vector3.forward)) > 0.99f,
+                    "Escape direction is not perpendicular to the lane");
+                Require(!BotBrain.IsInLanePath(new Vector3(0f, radius, 3f), radius, projectile, margin,
+                    start, end, false, Vector3.zero, out _), "Ball well clear of the lane was flagged");
+                Require(!BotBrain.IsInLanePath(new Vector3(-13f, radius, 0f), radius, projectile, margin,
+                    start, end, false, Vector3.zero, out _), "Ball beyond the lane start was flagged");
+                Require(!BotBrain.IsInLanePath(new Vector3(13f, radius, 0f), radius, projectile, margin,
+                    start, end, false, Vector3.zero, out _), "Ball beyond the lane end was flagged");
+                return "Corridor, escape direction and both dead zones agree";
+            });
+            Check("A flying shell stops threatening once it has passed the ball", () =>
+            {
+                Vector3 start = new Vector3(-11f, 0f, 0f), end = new Vector3(11f, 0f, 0f);
+                const float radius = 0.85f, projectile = 0.3f, margin = 0.9f;
+                Vector3 ball = new Vector3(0f, radius, 0.4f);
+                Require(BotBrain.IsInLanePath(ball, radius, projectile, margin, start, end, true,
+                    new Vector3(-4f, radius, 0f), out _), "Shell still approaching was not treated as a threat");
+                Require(!BotBrain.IsInLanePath(ball, radius, projectile, margin, start, end, true,
+                    new Vector3(5f, radius, 0f), out _), "Shell already past the ball was still treated as a threat");
+                return "Approaching shell threatens, passed shell does not";
+            });
             Check("Every ball gets the impact clamp component", () =>
             {
                 using var world = new World();
