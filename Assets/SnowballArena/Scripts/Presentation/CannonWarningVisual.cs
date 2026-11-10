@@ -5,8 +5,10 @@ namespace SnowballArena
 {
     public static class CannonWarningVisual
     {
-        // The shader's narrow core occupies 19% of this soft halo ribbon.
-        public const float Width = 0.18f;
+        // The shader's dark core covers 19% of the ribbon; pale shoulders fade outwards.
+        // CoreFraction must stay in sync with the 0.19 constant in CannonWarning.shader.
+        public const float CoreFraction = .19f;
+        public const float Width = 0.36f;
         public const float BoundaryInset = 0.18f;
         public const float GroundOffset = 0.035f;
 

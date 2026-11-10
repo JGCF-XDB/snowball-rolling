@@ -27,10 +27,15 @@ Shader "SnowArena/CannonWarning"
             {
                 float distance = abs(input.uv.y * 2 - 1);
                 float aa = max(fwidth(distance), .025);
+                // The dark core covers 0.19 of the half width, matching
+                // CannonWarningVisual.CoreFraction.
                 half core = 1 - smoothstep(.19 - aa, .19 + aa, distance);
-                half halo = exp2(-6 * distance * distance) * (1 - smoothstep(.75, 1, distance));
-                half alpha = saturate(core * .98 + halo * .22);
-                half3 color = lerp(half3(.95, .004, .022), half3(1, .055, .09), core);
+                // Across the width, a dark red center blends into pale red
+                // shoulders, which fade smoothly into the snow on both sides.
+                half shoulder = 1 - smoothstep(0, 1, distance);
+                half alpha = saturate(core * .4 + shoulder * .58);
+                half gradient = smoothstep(.10, .90, distance);
+                half3 color = lerp(half3(.55, .004, .018), half3(1, .36, .42), gradient);
                 float edgeFade = smoothstep(0, .003, input.uv.x) * smoothstep(0, .003, 1 - input.uv.x);
                 return half4(color, alpha * edgeFade);
             }

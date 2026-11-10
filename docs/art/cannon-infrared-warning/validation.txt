@@ -3,7 +3,7 @@ PASS Countdown does not advance cannon clock
 PASS No cannon before 20 seconds
 PASS Cannon spawns at 20 seconds with first flash
 PASS Warning follows the real full diameter through the center
-PASS Player build includes the supported infrared core-and-halo shader
+PASS Player build includes the supported infrared gradient warning shader
 PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
 PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
 PASS First flash turns off without firing
@@ -44,13 +44,13 @@ PASS Two cannons use different non-overlapping diameters
 PASS Only two cannons before 60 seconds
 60-second boundary: elapsed=60, active=3, warnings=2, thirdFlash=1
 PASS At 60 seconds third cannon joins with its own full warning
-PASS Player build includes the supported infrared core-and-halo shader
+PASS Player build includes the supported infrared gradient warning shader
 PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
 PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
-PASS Player build includes the supported infrared core-and-halo shader
+PASS Player build includes the supported infrared gradient warning shader
 PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
 PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
-PASS Player build includes the supported infrared core-and-halo shader
+PASS Player build includes the supported infrared gradient warning shader
 PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
 PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
 PASS Three cannons use different non-overlapping diameters

@@ -167,12 +167,12 @@ namespace SnowballArena
         {
             var warning = state.warning;
             Check(warning.sharedMaterial.shader.name == "SnowArena/CannonWarning" && warning.sharedMaterial.shader.isSupported,
-                "Player build includes the supported infrared core-and-halo shader");
+                "Player build includes the supported infrared gradient warning shader");
             var mesh = new Mesh();
             try
             {
-                // Inspect rendered geometry, including both edges of the halo. A
-                // camera-facing ribbon would fail the height and platform checks.
+                // Inspect rendered geometry, including both edges of the gradient
+                // ribbon. A camera-facing ribbon would fail the height and platform checks.
                 warning.BakeMesh(mesh, Camera.main, true);
                 bool grounded = mesh.vertexCount >= 4;
                 bool inFront = true;
