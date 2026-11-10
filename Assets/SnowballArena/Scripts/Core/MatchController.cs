@@ -32,8 +32,8 @@ namespace SnowballArena
         public float Countdown { get; private set; }
         public CannonDirector Cannon { get; private set; }
         private int lastCountdownSecond = -1;
-        private GUIStyle title, heading, label, small, button;
         private Font font;
+        private WinterMenuView winterMenu;
         private void Awake()
         {
             Cannon = GetComponent<CannonDirector>();
@@ -168,69 +168,67 @@ namespace SnowballArena
 
         private void OnGUI()
         {
-            if (title == null)
+            if (winterMenu == null)
             {
                 font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "Segoe UI" }, 24);
-                title = Style(36, FontStyle.Bold, Color.white); heading = Style(28, FontStyle.Bold, Color.white);
-                label = Style(19, FontStyle.Normal, new Color(0.87f, 0.95f, 1)); small = Style(15, FontStyle.Normal, new Color(0.60f, 0.80f, 0.87f));
-                button = new GUIStyle(GUI.skin.button) { font = font, fontSize = 20 };
+                winterMenu = new WinterMenuView(font);
             }
             Matrix4x4 previous = GUI.matrix;
             float scale = Mathf.Min(Screen.width / 1280f, Screen.height / 720f);
             GUI.matrix = Matrix4x4.Scale(Vector3.one * scale);
             float w = Screen.width / scale, h = Screen.height / scale;
-            Panel(new Rect(24, 22, 270, 95));
-            GUI.Label(new Rect(44, 32, 240, 44), "雪山 · 滚雪球", heading);
-            GUI.Label(new Rect(44, 79, 240, 25), "滚动成长 · 碰撞求生", small);
             if (Phase == MatchPhase.Menu)
             {
-                var r = new Rect(w / 2 - 230, h / 2 - 182, 460, 364); Panel(r);
-                GUI.Label(new Rect(r.x + 32, r.y + 22, 400, 52), "留在雪山之巅", title);
-                GUI.Label(new Rect(r.x + 32, r.y + 84, 400, 30), "最后存活者获胜 · 20秒后炮击", label);
-                GUI.Label(new Rect(r.x + 32, r.y + 130, 250, 30), "机器人数量", label);
-                if (GUI.Button(new Rect(r.x + 32, r.y + 176, 60, 44), "−", button)) { botCount = Mathf.Max(0, botCount - 1); Click(); }
-                GUI.Label(new Rect(r.x + 116, r.y + 178, 210, 44), botCount == 0 ? "0  ·  自由练习" : botCount + "  位对手", heading);
-                if (GUI.Button(new Rect(r.x + 368, r.y + 176, 60, 44), "+", button)) { botCount = Mathf.Min(15, botCount + 1); Click(); }
-                if (GUI.Button(new Rect(r.x + 32, r.y + 245, 396, 48), "开始游戏  ·  Enter", button)) StartMatch(botCount);
-                GUI.Label(new Rect(r.x + 32, r.y + 313, 410, 30), Notice ?? "← → 调整人数    WASD 控制红色描边雪球", small);
+                int previousCount = botCount;
+                bool start = winterMenu.Draw(w, h, ref botCount, Notice);
+                if (botCount != previousCount) Click();
+                if (start) StartMatch(botCount);
             }
             else
             {
-                string hazardText = Phase == MatchPhase.Results ? $"对局 {Cannon.Elapsed:F0}s · 对局结束" : Cannon.ActiveCannonCount > 0 ?
-                    $"{Cannon.Elapsed:F0}s · 炮台 {Cannon.ActiveCannonCount} · 预警 {Cannon.WarningCount} / 飞行 {Cannon.ProjectileCount}" :
-                    $"对局 {Cannon.Elapsed:F0}s · 炮台 {Mathf.Max(0, Cannon.startAfterSeconds - Cannon.Elapsed):F0}s 后出现";
-                GUI.Label(new Rect(w / 2 - 180, 26, 360, 32), hazardText, label);
-                Panel(new Rect(w - 284, 22, 260, 123));
-                GUI.Label(new Rect(w - 266, 35, 235, 44), "场上剩余  " + Remaining, heading);
+                winterMenu.Panel(new Rect(24, 22, 320, 100));
+                GUI.Label(new Rect(46, 35, 274, 42), "留在雪山之巅", winterMenu.HudHeading);
+                GUI.Label(new Rect(46, 79, 274, 26), "滚动成长 · 碰撞求生", winterMenu.HudSmall);
+                string hazardText = Phase == MatchPhase.Results ? "对局结束" : Cannon.ActiveCannonCount > 0 ?
+                    $"炮台 {Cannon.ActiveCannonCount} · 预警 {Cannon.WarningCount} / 飞行 {Cannon.ProjectileCount}" :
+                    $"炮台将在 {Mathf.CeilToInt(Mathf.Max(0, Cannon.startAfterSeconds - Cannon.Elapsed))} 秒后出现";
+                winterMenu.Panel(new Rect(w / 2 - 210, 22, 420, 98));
+                GUI.Label(new Rect(w / 2 - 182, 35, 364, 26), $"对局 {Cannon.Elapsed:F0} 秒", winterMenu.HudSmall);
+                GUI.Label(new Rect(w / 2 - 186, 65, 372, 36), hazardText, winterMenu.Hazard);
+                winterMenu.Panel(new Rect(w - 304, 22, 280, 137));
+                GUI.Label(new Rect(w - 282, 36, 236, 42), "场上剩余  " + Remaining, winterMenu.HudHeading);
                 var player = Participants[0];
-                GUI.Label(new Rect(w - 266, 78, 235, 27), $"半径 {player.body.Radius:F2} m  ·  {player.body.RigidBody.mass:F0} kg", small);
-                GUI.Label(new Rect(w - 266, 109, 235, 27), player.alive ? "红色描边雪球是你" : Notice == "你被炮弹击中" ? "炮弹命中，观战中" : "你已出局，观战中", small);
-                Panel(new Rect(24, h - 76, 550, 52));
-                GUI.Label(new Rect(44, h - 63, 520, 30), "WASD 移动   ·   Esc 返回菜单   ·   出局后 R 重开", small);
-                if (Phase != MatchPhase.Results && GUI.Button(new Rect(w - 230, h - 72, 206, 42), "返回菜单  ·  Esc", button)) ReturnToMenu();
+                GUI.Label(new Rect(w - 282, 81, 236, 26), $"半径 {player.body.Radius:F2} m  ·  {player.body.RigidBody.mass:F0} kg", winterMenu.HudSmall);
+                GUI.Label(new Rect(w - 282, 110, 236, 26), player.alive ? "红色描边雪球是你" : Notice == "你被炮弹击中" ? "炮弹命中，观战中" : "你已出局，观战中", winterMenu.HudSmall);
+                winterMenu.Panel(new Rect(24, h - 86, 570, 62));
+                GUI.Label(new Rect(46, h - 72, 526, 32), "WASD 移动   ·   Esc 返回菜单   ·   出局后 R 重开", winterMenu.HudSmall);
+                if (Phase != MatchPhase.Results)
+                {
+                    winterMenu.Panel(new Rect(w - 264, h - 92, 240, 68));
+                    if (GUI.Button(new Rect(w - 254, h - 82, 220, 48), "返回菜单  ·  Esc", winterMenu.SecondaryButton)) ReturnToMenu();
+                }
                 if (Phase == MatchPhase.Countdown)
-                    GUI.Label(new Rect(w / 2 - 40, h / 2 - 40, 100, 80), Mathf.CeilToInt(Countdown).ToString(), title);
+                {
+                    winterMenu.Panel(new Rect(w / 2 - 68, h / 2 - 68, 136, 136));
+                    GUI.Label(new Rect(w / 2 - 54, h / 2 - 54, 108, 108), Mathf.CeilToInt(Countdown).ToString(), winterMenu.Countdown);
+                }
                 if (Phase == MatchPhase.Results)
                 {
-                    var r = new Rect(w / 2 - 200, h / 2 - 110, 400, 220); Panel(r);
-                    GUI.Label(new Rect(r.x + 28, r.y + 25, 344, 50), Result, title);
-                    if (GUI.Button(new Rect(r.x + 28, r.y + 92, 344, 44), "再来一局  ·  R", button)) StartMatch(botCount);
-                    if (GUI.Button(new Rect(r.x + 28, r.y + 150, 344, 44), "返回菜单  ·  Esc", button)) ReturnToMenu();
+                    winterMenu.DimBackground(w, h);
+                    var r = new Rect(w / 2 - 240, h / 2 - 140, 480, 280);
+                    winterMenu.Panel(r);
+                    GUI.Label(new Rect(r.x + 30, r.y + 29, 420, 66), Result, winterMenu.ResultTitle);
+                    if (GUI.Button(new Rect(r.x + 36, r.y + 121, 408, 56), "再来一局  ·  R", winterMenu.PrimaryButton)) StartMatch(botCount);
+                    if (GUI.Button(new Rect(r.x + 36, r.y + 193, 408, 52), "返回菜单  ·  Esc", winterMenu.SecondaryButton)) ReturnToMenu();
                 }
             }
             GUI.matrix = previous;
         }
 
-        private GUIStyle Style(int size, FontStyle weight, Color color)
+        private void OnDestroy()
         {
-            var style = new GUIStyle(GUI.skin.label) { font = font, fontSize = size, fontStyle = weight };
-            style.normal.textColor = color; return style;
+            winterMenu?.Dispose();
+            if (font != null) Destroy(font);
         }
-        private static void Panel(Rect r)
-        {
-            Color previous = GUI.color; GUI.color = new Color(0.025f, 0.08f, 0.12f, 0.94f); GUI.DrawTexture(r, Texture2D.whiteTexture);
-            GUI.color = new Color(0.35f, 0.88f, 0.96f); GUI.DrawTexture(new Rect(r.x, r.y, 3, r.height), Texture2D.whiteTexture); GUI.color = previous;
-        }
-        private void OnDestroy() { if (font != null) Destroy(font); }
     }
 }
