@@ -53,3 +53,6 @@ Assets/Resources/PerformanceTestRun*.json.meta
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Agent tooling data (session logs, task snapshots)
+.reasonix/

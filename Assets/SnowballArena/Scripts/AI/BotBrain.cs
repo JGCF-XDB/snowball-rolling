@@ -12,6 +12,36 @@ namespace SnowballArena
         public float personality;
         [Tooltip("Weight given to an aligned, nearby opponent close to falling off. This is a rule score, not ML training.")]
         [Min(0f)] public float finishOpportunityWeight = 5f;
+        [Header("Impact judgement")]
+        [Tooltip("How much heavier an opponent must be before backing off and charging instead of trading hits.")]
+        [Min(1f)] public float chargeMassRatio = 1.3f;
+        [Tooltip("Speed below which a charge against a heavier opponent is worth preparing, in m/s.")]
+        [Min(0f)] public float chargeTriggerSpeed = 12f;
+        [Tooltip("Seconds spent pulling away before the next ram.")]
+        [Min(0f)] public float chargeSeconds = 0.9f;
+        [Tooltip("How much heavier an incoming ball must be to count as a threat.")]
+        [Min(1f)] public float threatMassRatio = 1.2f;
+        [Tooltip("Closing speed at which a heavier ball counts as dangerous, in m/s.")]
+        [Min(0f)] public float threatApproachSpeed = 10f;
+        [Tooltip("Closing speed that is dangerous regardless of mass, in m/s.")]
+        [Min(0f)] public float evadeApproachSpeed = 25f;
+        [Min(0f)] public float threatRadius = 8f;
+        [Tooltip("Seconds spent stepping aside from a heavier charge.")]
+        [Min(0f)] public float evadeSeconds = 0.6f;
+        [Header("Crowd escape")]
+        [Tooltip("Extra distance beyond the two radii that counts as crowding, in metres.")]
+        [Min(0f)] public float crowdGap = 1.5f;
+        [Tooltip("How many touching neighbours make a bot try to break free.")]
+        [Min(1)] public int crowdMinimum = 2;
+        [Tooltip("Bots slower than this inside a crowd try to break free, in m/s.")]
+        [Min(0f)] public float crowdBreakoutSpeed = 3f;
+        [Tooltip("Seconds spent leaving a crowd.")]
+        [Min(0f)] public float crowdBreakoutSeconds = 0.45f;
+        private enum BotIntent { Attack, Charge, Evade, Breakout }
+        private BotIntent intent;
+        private Vector3 intentDirection;
+        private float intentUntil, nextChargeAt, nextEvadeAt, nextBreakoutAt, nextThreatScan;
+        private MatchParticipant threat;
         private float nextDecision, retargetAt, blockedTime, manoeuvreUntil;
         private Vector3 manoeuvreDirection, attackOutward;
         private float targetEdgeDistance;
@@ -39,6 +69,54 @@ namespace SnowballArena
             if (speed > 0.25f && Clearance(velocity / speed, stoppingDistance + 0.6f) < stoppingDistance + 0.3f)
             {
                 self.motor.SetMoveDirection(-velocity.normalized);
+                return;
+            }
+
+            // A heavier ball already closing fast cannot be beaten by standing ground.
+            // Step aside and let it spend its speed instead of feeding it a head-on hit.
+            if (Time.fixedTime >= nextThreatScan)
+            {
+                nextThreatScan = Time.fixedTime + 0.2f;
+                threat = FindThreat(velocity);
+            }
+            if (intent == BotIntent.Evade)
+            {
+                if (Time.fixedTime < intentUntil && ShouldEvade(threat, velocity, out _, out _))
+                {
+                    DriveSafely(intentDirection, braking, velocity, SpeedCap(ball));
+                    return;
+                }
+                intent = BotIntent.Attack;
+            }
+            if (threat != null && Time.fixedTime >= nextEvadeAt && ShouldEvade(threat, velocity, out _, out _))
+            {
+                intent = BotIntent.Evade;
+                intentUntil = Time.fixedTime + evadeSeconds;
+                nextEvadeAt = Time.fixedTime + evadeSeconds + 1.5f;
+                intentDirection = EvadeDirection(threat, velocity);
+                DriveSafely(intentDirection, braking, velocity, SpeedCap(ball));
+                return;
+            }
+
+            // Several slow balls pressed together cannot push each other anywhere. Break
+            // the tie by leaving the pile instead of adding another body to it.
+            if (intent == BotIntent.Breakout)
+            {
+                if (Time.fixedTime < intentUntil && Clearance(intentDirection, 2f) > 1f)
+                {
+                    DriveSafely(intentDirection, braking, velocity, SpeedCap(ball));
+                    return;
+                }
+                intent = BotIntent.Attack;
+            }
+            if (intent == BotIntent.Attack && Time.fixedTime >= nextBreakoutAt && speed < crowdBreakoutSpeed
+                && TryCrowdDirection(position, out Vector3 escape))
+            {
+                intent = BotIntent.Breakout;
+                intentUntil = Time.fixedTime + crowdBreakoutSeconds;
+                nextBreakoutAt = Time.fixedTime + crowdBreakoutSeconds + 2f;
+                intentDirection = escape;
+                DriveSafely(escape, braking, velocity, SpeedCap(ball));
                 return;
             }
 
@@ -85,6 +163,33 @@ namespace SnowballArena
             if (target == null) { DriveVelocity(Vector3.zero, velocity); return; }
             Vector3 offset = Flat(target.body.RigidBody.position - position);
             float contactDistance = ball.Radius + target.body.Radius;
+            float targetMassRatio = target.body.RigidBody.mass / Mathf.Max(0.001f, body.mass);
+
+            // A shove comes from momentum, so a standing start cannot move a much heavier
+            // ball. Pull back first, then charge with real speed behind the hit.
+            if (!pressingAdvantage && Time.fixedTime >= nextChargeAt && targetMassRatio >= chargeMassRatio
+                && speed < chargeTriggerSpeed && offset.magnitude < contactDistance + 8f)
+            {
+                Vector3 retreat = ChooseHeading(-offset.normalized);
+                if (Clearance(retreat, 3f) > 2f)
+                {
+                    intent = BotIntent.Charge;
+                    intentUntil = Time.fixedTime + chargeSeconds;
+                    nextChargeAt = Time.fixedTime + chargeSeconds + 3f;
+                    intentDirection = retreat;
+                }
+            }
+            if (intent == BotIntent.Charge)
+            {
+                // Stop backing off when the retreat runs out of platform; the normal
+                // attack flow takes over with whatever speed was built up.
+                if (Time.fixedTime < intentUntil && Clearance(intentDirection, 2f) > 1f)
+                {
+                    DriveSafely(intentDirection, braking, velocity, SpeedCap(ball));
+                    return;
+                }
+                intent = BotIntent.Attack;
+            }
             // Lead a moving opponent, but use its real position when an intercept would
             // lead off the surface. Never steer after an already falling opponent.
             float leadTime = Mathf.Clamp((offset.magnitude - contactDistance) / 8f, 0f, 0.55f);
@@ -151,7 +256,88 @@ namespace SnowballArena
             float safeSpeed = Mathf.Sqrt(2f * braking * Mathf.Max(0f, room - 0.35f));
             // Keep driving through contact to push the opponent. Only terrain safety,
             // not distance to the opponent, reduces the commanded approach speed.
-            DriveVelocity(heading * Mathf.Min(18.9f, safeSpeed), velocity);
+            DriveVelocity(heading * Mathf.Min(SpeedCap(ball), safeSpeed), velocity);
+        }
+
+        private static float SpeedCap(SnowballBody ball)
+        {
+            // Bots used to stop at a hard 18.9 m/s while the player could cruise far faster.
+            // Derive the cap from the current drive tier instead of a stale constant.
+            var settings = ball.settings;
+            return Mathf.Max(5f, settings.driveForce / Mathf.Max(1f, settings.groundDrag) * 0.85f);
+        }
+
+        private void DriveSafely(Vector3 direction, float braking, Vector3 velocity, float maxSpeed)
+        {
+            float room = Clearance(direction, 12f);
+            float safeSpeed = Mathf.Sqrt(2f * braking * Mathf.Max(0f, room - 0.35f));
+            DriveVelocity(direction * Mathf.Min(maxSpeed, safeSpeed), velocity);
+        }
+
+        private MatchParticipant FindThreat(Vector3 velocity)
+        {
+            MatchParticipant worst = null;
+            float worstScore = 0f;
+            foreach (var candidate in match.Participants)
+            {
+                if (candidate == self || !ShouldEvade(candidate, velocity, out _, out float score)) continue;
+                if (score > worstScore) { worstScore = score; worst = candidate; }
+            }
+            return worst;
+        }
+
+        private bool ShouldEvade(MatchParticipant candidate, Vector3 velocity, out Vector3 incoming, out float score)
+        {
+            incoming = Vector3.zero; score = 0f;
+            if (candidate == null || !ValidTarget(candidate)) return false;
+            Vector3 offset = Flat(candidate.body.RigidBody.position - self.body.RigidBody.position);
+            float distance = offset.magnitude;
+            float reach = threatRadius + self.body.Radius + candidate.body.Radius;
+            if (distance < 0.0001f || distance > reach) return false;
+            float massRatio = candidate.body.RigidBody.mass / Mathf.Max(0.001f, self.body.RigidBody.mass);
+            incoming = Flat(candidate.body.RigidBody.linearVelocity
+                - match.surface.VelocityAt(candidate.body.RigidBody.position)) - velocity;
+            // Positive approach means the other ball is closing on us right now.
+            float approach = -Vector3.Dot(incoming, offset / distance);
+            if (approach < threatApproachSpeed) return false;
+            // Heavy balls are dangerous once they close in; anything closing fast enough is
+            // dangerous regardless of mass.
+            if (massRatio < threatMassRatio && approach < evadeApproachSpeed) return false;
+            score = approach * (0.5f + massRatio) / Mathf.Max(1f, distance);
+            return true;
+        }
+
+        private bool TryCrowdDirection(Vector3 position, out Vector3 direction)
+        {
+            direction = Vector3.zero;
+            Vector3 push = Vector3.zero;
+            int neighbours = 0;
+            foreach (var candidate in match.Participants)
+            {
+                if (candidate == self || !ValidTarget(candidate)) continue;
+                Vector3 offset = Flat(candidate.body.RigidBody.position - position);
+                float reach = self.body.Radius + candidate.body.Radius + crowdGap;
+                if (offset.sqrMagnitude > reach * reach || offset.sqrMagnitude < 0.0001f) continue;
+                // Closer neighbours weigh more, so the escape route points out of the pile.
+                push -= offset / Mathf.Max(0.35f, offset.sqrMagnitude);
+                neighbours++;
+            }
+            if (neighbours < crowdMinimum || push.sqrMagnitude < 0.01f) return false;
+            direction = ChooseHeading(push.normalized);
+            return Clearance(direction, 3f) > 1.5f;
+        }
+
+        private Vector3 EvadeDirection(MatchParticipant candidate, Vector3 velocity)
+        {
+            Vector3 incoming = Flat(candidate.body.RigidBody.linearVelocity
+                - match.surface.VelocityAt(candidate.body.RigidBody.position)) - velocity;
+            if (incoming.sqrMagnitude < 0.01f)
+                incoming = Flat(self.body.RigidBody.position - candidate.body.RigidBody.position);
+            Vector3 side = Vector3.Cross(Vector3.up, incoming.normalized);
+            // Pick the side with more platform left, biased back towards the middle.
+            if (Clearance(side, 6f) < Clearance(-side, 6f)) side = -side;
+            Vector3 inward = -NearestEdge(self.body.RigidBody.position, out _);
+            return (side * 0.8f + inward * 0.2f).normalized;
         }
 
         private void DriveVelocity(Vector3 desired, Vector3 velocity)
