@@ -5,10 +5,12 @@ namespace SnowballArena
 {
     public static class CannonWarningVisual
     {
-        // The shader's dark core covers 19% of the ribbon; pale shoulders fade outwards.
-        // CoreFraction must stay in sync with the 0.19 constant in CannonWarning.shader.
+        // The shader keeps a vivid core over 19% of the ribbon and fades from
+        // there to transparent; CoreFraction must stay in sync with the 0.19
+        // constant in CannonWarning.shader.
         public const float CoreFraction = .19f;
-        public const float Width = 0.36f;
+        // 3x the first infrared ribbon (0.18 m).
+        public const float Width = 0.54f;
         public const float BoundaryInset = 0.18f;
         public const float GroundOffset = 0.035f;
 

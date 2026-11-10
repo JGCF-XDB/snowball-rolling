@@ -202,7 +202,7 @@ CannonDirector 管理等待、预警、飞行状态，MatchController 在每个�
 
 炮台、炮弹和预警线共用比赛相机的 layer 0，避免被只负责远山的 layer 2 相机错误取景。正式对局采用 Blender 制作的暗色 B 冰晶长管炮和冰壳核心弹，保留三层六角底座和冰晶支撑，炮管约 3.21 m 长，圆口为 48 段细分与倒角，炮口内径和炮弹外径均为 0.60 m。符文随预警线闪烁；发射时出现柔边圆形辉光和炮管后坐；炮弹具有圆弧端面，飞行时显示旋转与最长约 2.16 m 的橙色短拖尾；命中后有 0.30 s 的冰晶余烬消散。动效没有额外碰撞或范围伤害，并随结算、重开和返回菜单清理。资源、源文件、实机预览与重建说明见 [暗色 B 大炮与炮弹](docs/art/selected-cannon-b/README.md)。
 
-红外警示线采用横向渐变：中间为深红色，两侧逐渐变成浅红色并透明淡出。总宽为 0.36 m，是初版红外线的 2 倍，其中深红细芯约 0.068 m。线条固定平铺在雪面上方 0.035 m，两端各从平台边界内收 0.18 m，不延伸到炮台下方。正常深度检测使雪球、炮身保持正确遮挡。视觉参数集中在 Scripts/Presentation/CannonWarningVisual.cs，效果与前后对比见 [红外警示线](docs/art/cannon-infrared-warning/README.md)。
+红外警示线采用横向渐变：中间为大红色，两侧自然渐变为浅红色并透明淡出。总宽为 0.54 m，是初版红外线的 3 倍，其中大红细芯约 0.103 m。线条固定平铺在雪面上方 0.035 m，两端各从平台边界内收 0.18 m，不延伸到炮台下方。正常深度检测使雪球、炮身保持正确遮挡。视觉参数集中在 Scripts/Presentation/CannonWarningVisual.cs，效果与前后对比见 [红外警示线](docs/art/cannon-infrared-warning/README.md)。
 
 参数位于 Scripts/Arena/CannonDirector.cs：startAfterSeconds、escalationInterval、flashHalfPeriod、projectileSpeed、projectileRadius。场景中的 MatchController 启动时自动挂载该组件。菜单 Snowball Arena > Build Cannon Game 可准备预警材质并打包；Resources/CannonSignal.mat 和 Resources/CannonWarning.mat 随项目保存，普通 Windows 打包入口同样可用。
 
