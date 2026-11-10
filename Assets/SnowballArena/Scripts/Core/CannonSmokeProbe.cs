@@ -145,6 +145,7 @@ namespace SnowballArena
             cannon.Advance(19.98f);
             Check(cannon.ActiveCannonCount == 2, "Only two cannons before 60 seconds");
             cannon.Advance(0.02f);
+            checks.Add($"60-second boundary: elapsed={cannon.Elapsed:R}, active={cannon.ActiveCannonCount}, warnings={cannon.WarningCount}, thirdFlash={(cannon.ActiveCannonCount > 2 ? cannon.Cannons[2].FlashCount : -1)}");
             Check(cannon.ActiveCannonCount == 3 && cannon.Cannons[2].WarningVisible && cannon.Cannons[2].FlashCount == 1,
                 "At 60 seconds third cannon joins with its own full warning");
             CheckAngles("Three cannons use different non-overlapping diameters");
