@@ -11,7 +11,7 @@ namespace SnowballArena.Editor
 
         public static void ConfigureMaterials()
         {
-            Configure(BallMaterialPath, "SnowContact", 0.95f);
+            Configure(BallMaterialPath, "SnowContact", 0.7f);
             Configure(GroundMaterialPath, "ArenaContact", 0.05f);
             AssetDatabase.SaveAssets();
         }
@@ -22,7 +22,7 @@ namespace SnowballArena.Editor
             if (material == null) { material = new PhysicsMaterial(name); AssetDatabase.CreateAsset(material, path); }
             material.dynamicFriction = 0.45f; material.staticFriction = 0.5f;
             material.frictionCombine = PhysicsMaterialCombine.Average;
-            // Ball/ball uses 0.95; ball/ground uses 0.05 without extra impulses.
+            // Ball/ball uses 0.7 (impacts rebound clearly); ball/ground stays 0.05 without extra impulses.
             material.bounciness = restitution; material.bounceCombine = PhysicsMaterialCombine.Minimum;
             EditorUtility.SetDirty(material);
         }

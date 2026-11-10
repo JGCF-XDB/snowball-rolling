@@ -135,10 +135,12 @@ namespace SnowballArena.Editor
                 slot.stringValue = entry.Item2;
             }
             tags.ApplyModifiedProperties();
-            Time.fixedDeltaTime = 1f / 60f;
+            // Half the old step: a 50 m/s ball moves 0.42 m per step instead of 0.83 m,
+            // which keeps fast impacts from tunnelling and bursting apart.
+            Time.fixedDeltaTime = 1f / 120f;
             Time.maximumDeltaTime = 0.1f;
             var timeSettings = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TimeManager.asset")[0]);
-            timeSettings.FindProperty("Fixed Timestep").floatValue = 1f / 60f;
+            timeSettings.FindProperty("Fixed Timestep").floatValue = 1f / 120f;
             timeSettings.FindProperty("Maximum Allowed Timestep").floatValue = 0.1f;
             timeSettings.ApplyModifiedProperties();
             PlayerSettings.companyName = "Snowball Arena";
