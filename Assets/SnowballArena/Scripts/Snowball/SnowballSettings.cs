@@ -8,18 +8,22 @@ namespace SnowballArena
         [Min(0.1f)] public float initialRadius = 0.85f;
         [Min(1f)] public float density = 25f;
         [Tooltip("Mass growth relative to initial volume. 1 is constant density; values above 1 strengthen grown snowballs.")]
-        [Range(1f, 1.5f)] public float massGrowthExponent = 1.1f;
-        [Min(0f)] public float driveForce = 2517.12f;
+        [Range(1f, 1.5f)] public float massGrowthExponent = 1.35f;
+        [Min(0f)] public float driveForce = 3272.256f;
         [Tooltip("Ground-only force per unit of horizontal speed. No hard speed clamp.")]
-        [Min(0f)] public float groundDrag = 50f;
+        [Min(0f)] public float groundDrag = 65f;
         [Tooltip("Lower limit of commanded force per kg; rolling inertia still affects actual acceleration.")]
-        [Min(0f)] public float minimumDriveAcceleration = 11.52f;
+        [Min(0f)] public float minimumDriveAcceleration = 14.976f;
         [Range(0.05f, 1f)] public float massControlExponent = 0.55f;
         [Range(0f, 0.5f)] public float massSpeedExponent = 0.08f;
         [Tooltip("Cubic metres of collected snow per metre of actual surface rolling. No size cap.")]
         [Min(0f)] public float volumePerMetre = 0.16f;
         [Min(0.01f)] public float supportProbeGap = 0.06f;
         [Range(0f, 1f)] public float minimumSupportNormal = 0.6f;
+        [Tooltip("Upward speed a snowball-on-snowball impact may add, in m/s. Keeps fast hits shoving sideways instead of launching balls off the platform.")]
+        [Min(0f)] public float impactVerticalAllowance = 0.5f;
+        [Tooltip("Approach speed below which an impact is not corrected, in m/s. Avoids touching slow pushing contact.")]
+        [Min(0f)] public float impactSpeedThreshold = 3f;
         public float InitialMass => density * (4f / 3f) * Mathf.PI * Mathf.Pow(initialRadius, 3);
 
         public float MassForVolume(double volume)

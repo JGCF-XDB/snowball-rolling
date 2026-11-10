@@ -80,6 +80,67 @@ namespace SnowballArena.Editor
             Check("Elastic gameplay contact transfers speed between equal masses", () => Collision(0.65f, 0f, true, true));
             Check("Fast attacker rebounds from heavier opponent with conserved momentum", () => Collision(1f, 0f, true, true));
             Check("Lighter opponent receives greater speed without extra energy", () => Collision(0.45f, 0f, true, true));
+            Check("Every ball gets the impact clamp component", () =>
+            {
+                using var world = new World();
+                var ball = world.Ball(Vector3.zero);
+                Require(ball.GetComponent<SnowballImpact>() != null, "SnowballBody.Initialize did not add SnowballImpact");
+                return "Runtime ball carries SnowballImpact";
+            });
+            Check("High-speed level impact stays level in the solver", () =>
+            {
+                // Note: PhysicsScene.Simulate does not run FixedUpdate or collision callbacks,
+                // so this covers the solver + material only. The clamp rule itself is covered
+                // by the next check.
+                using var world = new World();
+                var a = world.Ball(new Vector3(-4, 5, 0), 0.65f, false); var b = world.Ball(new Vector3(0, 5, 0), 0.65f, false);
+                var contact = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.BallMaterialPath);
+                a.GetComponent<SphereCollider>().sharedMaterial = contact;
+                b.GetComponent<SphereCollider>().sharedMaterial = contact;
+                // Faster than the current 50 m/s cruise, so this covers the worst case.
+                a.RigidBody.linearVelocity = Vector3.right * 80;
+                float worstUpward = 0f;
+                for (int i = 0; i < 60; i++)
+                {
+                    world.Simulate(1f / 120);
+                    worstUpward = Mathf.Max(worstUpward, Mathf.Max(a.RigidBody.linearVelocity.y, b.RigidBody.linearVelocity.y));
+                }
+                Require(worstUpward < 1.5f, $"A ball gained {worstUpward:F2} m/s of upward speed from a level impact");
+                Require(Mathf.Abs(a.RigidBody.position.y - 5f) < 0.5f && Mathf.Abs(b.RigidBody.position.y - 5f) < 0.5f,
+                    "Level impact moved a ball vertically");
+                return $"Peak upward speed {worstUpward:F3} m/s";
+            });
+            Check("Impact clamp removes contact-created upward speed without ratcheting", () =>
+            {
+                var settings = AssetDatabase.LoadAssetAtPath<SnowballSettings>(PrototypeBuilder.Root + "/Configs/DefaultSnowball.asset");
+                Require(settings != null && settings.impactVerticalAllowance > 0f, "Missing snowball settings");
+                // First frame of a contact may keep a small allowance, but the clip falls back
+                // to the step-start speed rather than to the raised limit.
+                Require(SnowballImpact.TryClamp(4f, 0f, settings, true, out float first) && Mathf.Abs(first) < 0.0001f,
+                    "First impact frame did not clip down to the step-start speed");
+                // Sustained contact must not hand out another allowance every step.
+                Require(!SnowballImpact.TryClamp(0f, 0f, settings, false, out _),
+                    "Sustained contact re-raised the upward limit");
+                // Upward speed that already existed before the contact is kept.
+                Require(SnowballImpact.TryClamp(6f, 5f, settings, false, out float kept) && Mathf.Abs(kept - 5f) < 0.0001f,
+                    "Clamp removed upward speed that predates the contact");
+                return $"Allowance {settings.impactVerticalAllowance:F2} m/s applies to the first frame only";
+            });
+            Check("Equal-speed collision rebounds within the material restitution", () =>
+            {
+                using var world = new World();
+                var a = world.Ball(new Vector3(-4, 5, 0)); var b = world.Ball(new Vector3(0, 5, 0));
+                var contact = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.BallMaterialPath);
+                a.GetComponent<SphereCollider>().sharedMaterial = contact;
+                b.GetComponent<SphereCollider>().sharedMaterial = contact;
+                a.RigidBody.linearVelocity = Vector3.right * 12f; b.RigidBody.linearVelocity = Vector3.left * 12f;
+                for (int i = 0; i < 120; i++) world.Simulate(1f / 120);
+                float separation = Vector3.Dot(b.RigidBody.linearVelocity - a.RigidBody.linearVelocity, Vector3.right);
+                float expected = 24f * contact.bounciness;
+                Require(separation > expected * 0.7f && separation < expected * 1.3f,
+                    $"24 m/s approach rebounded at {separation:F2} m/s, expected about {expected:F2} m/s");
+                return $"24 m/s approach rebounded at {separation:F2} m/s (restitution {contact.bounciness:F2})";
+            });
             Check("Gameplay ground settles a dropped ball without repeated bouncing", () =>
             {
                 using var world = new World(); world.Platform();
@@ -207,7 +268,10 @@ namespace SnowballArena.Editor
                 a.GetComponent<SphereCollider>().sharedMaterial = contact;
                 b.GetComponent<SphereCollider>().sharedMaterial = contact;
                 restitution = contact.bounciness;
-                Require(Mathf.Abs(restitution - 0.95f) < 0.001f, "Wrong gameplay restitution");
+                // Snow impacts must rebound clearly, but not behave like a perfectly elastic
+                // contact where equal balls simply swap speed and never push each other out.
+                Require(restitution > 0.5f && restitution < 0.9f,
+                    $"Gameplay restitution {restitution:F2} is outside the rebounding snow range");
             }
             var initialVelocity = Vector3.right * (fast ? 80 : 6);
             a.RigidBody.linearVelocity = initialVelocity;
