@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4e8f0f04855aba4f91070c72649cfab, type: 3}
+  m_Name: SnowballAudioLibrary
+  m_EditorClassIdentifier: SnowballArena.Runtime::SnowballArena.AudioLibrary
+  softHits:
+  - {fileID: 8300000, guid: da03fc93d52e22e4ebcfae06622d9cfa, type: 3}
+  - {fileID: 8300000, guid: a80142468e6d37c449de969145791628, type: 3}
+  - {fileID: 8300000, guid: 558e14bc2747246449bf9d83e01ae0be, type: 3}
+  hardHits:
+  - {fileID: 8300000, guid: 565b2f2866fc7d144924be3d5fe18202, type: 3}
+  - {fileID: 8300000, guid: 6aa7398af47b3f948af51382753ae8f7, type: 3}
+  - {fileID: 8300000, guid: ab0317a5297f6ce4f82d1a36875be70e, type: 3}
+  - {fileID: 8300000, guid: c9a0f7bafc73803439f2e846e24edc7c, type: 3}
+  - {fileID: 8300000, guid: f9d13bc21b1ecc54aa3ecaa5d33556ad, type: 3}
+  groundHits:
+  - {fileID: 8300000, guid: 2d230d03d8a221945843d37a978cc813, type: 3}
+  - {fileID: 8300000, guid: b43dfbf7043d5fd438f95c2a43870a06, type: 3}
+  - {fileID: 8300000, guid: e8b3e670440e07f4fa5355cb98c9f302, type: 3}
+  - {fileID: 8300000, guid: cb5c1e5ad6720b5408ce1ce2a785044d, type: 3}
+  rollLoop: {fileID: 8300000, guid: 2f673e37654a38a4cbf1c48ab14f9bbe, type: 3}
+  click: {fileID: 8300000, guid: 3a0ae401acef51245afe7e30a9640f9d, type: 3}
+  hover: {fileID: 8300000, guid: 3d7b5a61fc2efa44ebea8e0935e15027, type: 3}
+  confirm: {fileID: 8300000, guid: 028de96ecaa4ceb438dbe6a5381303d7, type: 3}
+  countdownTick: {fileID: 8300000, guid: f3d80c3ba60d6d8409fd569133930e41, type: 3}
+  victory: {fileID: 8300000, guid: c89a9ddaa4ac1e34fae61f07662206d1, type: 3}
+  defeat: {fileID: 8300000, guid: 9353676c8da1056408a97fccc35c7707, type: 3}
+  musicMenu: {fileID: 8300000, guid: ec79c75fecc184f4c94b330d38ee462b, type: 3}
+  musicMatch: {fileID: 8300000, guid: a16433e314e83cb469f50535a8622bf9, type: 3}
