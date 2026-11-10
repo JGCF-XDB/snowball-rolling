@@ -87,8 +87,9 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 | 菜单 / 对局背景音乐 | `Music/menu_theme.ogg`（25 s 循环）、`Music/match_theme.ogg`（16.6 s 循环） | OpenGameArt, CC0 |
 | 炮台部署 | `Cannon/cannon_deploy.ogg` | Kenney Impact Sounds（impactMetal_heavy）, CC0 |
 | 发射前预警 | `Cannon/cannon_warning.wav`（0.2 s，880 Hz，每次闪烁升高音高） | 本项目生成 |
-| 炮击与飞行 | `Cannon/cannon_fire.wav`（0.9 s 炮响）、`Cannon/cannon_flight.wav`（呼啸） | 本项目生成 |
-| 炮弹命中爆炸 | `Cannon/cannon_explosion.wav`（1.4 s，低频冲击 + 爆破 + 尾音） | 本项目生成 |
+| 炮击 | `Cannon/cannon_fire.wav`（1.20 s，真实加农炮录音） | OpenGameArt「Cannon fire」by Thimras, CC0 |
+| 炮弹飞行 | `Cannon/cannon_flight.wav`（0.42 s，低频呼啸） | 本项目生成 |
+| 炮弹命中 | `Cannon/cannon_explosion.wav`（1.15 s，撞击 + 碎裂） | OpenGameArt「Cannon hit wall」by Thimras, CC0 |
 | 玩家击落奖励 | `Reward/knockdown.wav`（A5→E6 上行双音） | 本项目生成 |
 
 运行时结构（均为自动挂载，不需要改场景或预制体）：
