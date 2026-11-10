@@ -25,6 +25,16 @@ namespace SnowballArena
         public AudioClip victory;
         public AudioClip defeat;
 
+        [Header("Cannons")]
+        public AudioClip cannonDeploy;
+        public AudioClip cannonWarning;
+        public AudioClip cannonFire;
+        public AudioClip cannonFlight;
+        public AudioClip cannonExplosion;
+
+        [Header("Rewards")]
+        public AudioClip knockdown;
+
         [Header("Music")]
         public AudioClip musicMenu;
         public AudioClip musicMatch;

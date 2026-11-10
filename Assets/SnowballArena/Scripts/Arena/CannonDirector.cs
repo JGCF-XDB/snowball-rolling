@@ -117,7 +117,10 @@ namespace SnowballArena
                 Elapsed += step; remaining -= step;
                 if (hitCannon != null)
                 {
-                    EmitImpact(hitCannon.ShotPosition, (hitCannon.LaneEnd - hitCannon.LaneStart).normalized);
+                    // Read the shot position before the cannon is rebuilt for its next cycle.
+                    Vector3 impactPoint = hitCannon.ShotPosition;
+                    EmitImpact(impactPoint, (hitCannon.LaneEnd - hitCannon.LaneStart).normalized);
+                    if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.CannonExplosion(impactPoint);
                     match.Eliminate(victim, EliminationCause.Cannon);
                     if (!SpawnCannon(hitCannon)) { Stop(); break; }
                 }
@@ -132,7 +135,13 @@ namespace SnowballArena
                     if (c.Stage == CannonStage.Warning)
                     {
                         int half = Mathf.FloorToInt(c.stageTime / Mathf.Max(0.05f, flashHalfPeriod));
-                        c.FlashCount = Mathf.Min(3, half / 2 + 1);
+                        int flashes = Mathf.Min(3, half / 2 + 1);
+                        // Only the transitions are audible, so the blip stays a countdown.
+                        if (flashes != c.FlashCount)
+                        {
+                            c.FlashCount = flashes;
+                            if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.CannonWarning(c.LaneStart, flashes);
+                        }
                         c.warning.enabled = half < 6 && half % 2 == 0;
                         c.visuals.SetWarning(c.warning.enabled);
                     }
@@ -191,6 +200,7 @@ namespace SnowballArena
             c.warning.useWorldSpace = true; c.warning.positionCount = 2; c.warning.widthMultiplier = projectileRadius * 2;
             c.warning.SetPosition(0, start - Vector3.up * 0.75f); c.warning.SetPosition(1, end - Vector3.up * 0.75f);
             c.warning.enabled = true;
+            if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.CannonDeploy(start);
             return true;
         }
 
@@ -209,6 +219,11 @@ namespace SnowballArena
             c.trail.widthCurve = AnimationCurve.Linear(0, 0, 1, 1);
             c.trail.numCapVertices = 3;
             UpdateTrail(c);
+            if (ArenaFeedback.Instance != null)
+            {
+                ArenaFeedback.Instance.CannonFire(c.LaneStart);
+                ArenaFeedback.Instance.CannonFlight(c.LaneStart);
+            }
         }
 
         private void UpdateTrail(CannonState c)

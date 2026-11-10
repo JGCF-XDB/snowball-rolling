@@ -24,6 +24,8 @@ namespace SnowballArena
         public Camera arenaCamera;
         public int botCount = 5;
         public float countdownSeconds = 3f;
+        [Tooltip("Seconds after the last shove during which a fall still counts as the player's kill.")]
+        public float knockdownCreditSeconds = 3.5f;
         public MatchPhase Phase { get; private set; } = MatchPhase.Menu;
         public List<MatchParticipant> Participants { get; } = new List<MatchParticipant>();
         public int Remaining { get; private set; }
@@ -124,6 +126,25 @@ namespace SnowballArena
             participant.body.GetComponent<SnowballGrowth>().enabled = false;
             participant.body.gameObject.SetActive(false);
             if (participant.isPlayer) Notice = cause == EliminationCause.Cannon ? "你被炮弹击中" : "你掉出了平台";
+            else if (cause == EliminationCause.Fall) CreditKnockdown(participant);
+        }
+
+        // A fall only counts as the player's kill when the player was the last ball pushing it
+        // and that shove is recent enough to be the cause. Cannon kills and bot-on-bot falls
+        // stay uncredited, so the reward cue keeps meaning "I pushed that one off".
+        private void CreditKnockdown(MatchParticipant victim)
+        {
+            var attacker = victim.body.LastKnockedBy;
+            if (attacker == null) return;
+            if (Time.fixedTime - victim.body.LastKnockTime > knockdownCreditSeconds) return;
+            foreach (var owner in Participants)
+            {
+                if (owner.body != attacker) continue;
+                if (!owner.isPlayer || !owner.alive) return;
+                if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.Knockdown();
+                Notice = "撞落 " + victim.displayName;
+                return;
+            }
         }
         public void ResolveEliminations()
         {

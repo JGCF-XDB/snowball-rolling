@@ -11,10 +11,16 @@ namespace SnowballArena
         public float Radius { get; private set; }
         public double Volume { get; private set; }
 
+        public SnowballBody LastKnockedBy { get; private set; }
+        public float LastKnockTime { get; private set; } = float.NegativeInfinity;
+
         private void Awake() => Initialize();
 
         public void Initialize()
         {
+            // Reset includes the knock bookkeeping: a reused ball must not inherit last round's shove.
+            LastKnockedBy = null;
+            LastKnockTime = float.NegativeInfinity;
             RigidBody = GetComponent<Rigidbody>();
             // Added at runtime so every existing prefab and scene keeps working without
             // re-authoring components; it only clips upward speed created by a snowball hit.
@@ -34,6 +40,13 @@ namespace SnowballArena
             RigidBody.solverIterations = 12;
             RigidBody.solverVelocityIterations = 6;
             UpdateInertia();
+        }
+
+        public void RecordKnock(SnowballBody attacker)
+        {
+            if (attacker == null || attacker == this) return;
+            LastKnockedBy = attacker;
+            LastKnockTime = Time.fixedTime;
         }
 
         private void UpdateInertia()

@@ -35,6 +35,12 @@ namespace SnowballArena.Editor
             library.defeat = LoadOne("Jingle/jingle_defeat");
             library.musicMenu = LoadOne("Music/menu_theme");
             library.musicMatch = LoadOne("Music/match_theme");
+            library.cannonDeploy = LoadOne("Cannon/cannon_deploy");
+            library.cannonWarning = LoadOne("Cannon/cannon_warning");
+            library.cannonFire = LoadOne("Cannon/cannon_fire");
+            library.cannonFlight = LoadOne("Cannon/cannon_flight");
+            library.cannonExplosion = LoadOne("Cannon/cannon_explosion");
+            library.knockdown = LoadOne("Reward/knockdown");
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

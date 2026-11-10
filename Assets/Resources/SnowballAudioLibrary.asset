@@ -34,5 +34,11 @@ MonoBehaviour:
   countdownTick: {fileID: 8300000, guid: f3d80c3ba60d6d8409fd569133930e41, type: 3}
   victory: {fileID: 8300000, guid: c89a9ddaa4ac1e34fae61f07662206d1, type: 3}
   defeat: {fileID: 8300000, guid: 9353676c8da1056408a97fccc35c7707, type: 3}
+  cannonDeploy: {fileID: 8300000, guid: b281dcda235124047bbca0fad7113885, type: 3}
+  cannonWarning: {fileID: 8300000, guid: 6ca5e9bc0fb141d44aa58c8e9307e7cd, type: 3}
+  cannonFire: {fileID: 8300000, guid: 95c82717c4ad1d146a84a12a3bb3d603, type: 3}
+  cannonFlight: {fileID: 8300000, guid: b05d73548b124bf4494381bc4f2964f0, type: 3}
+  cannonExplosion: {fileID: 8300000, guid: b80161e2921db58439fa7fde68f9153b, type: 3}
+  knockdown: {fileID: 8300000, guid: 9af62934473faf14dae58a3d58b96a0f, type: 3}
   musicMenu: {fileID: 8300000, guid: ec79c75fecc184f4c94b330d38ee462b, type: 3}
   musicMatch: {fileID: 8300000, guid: a16433e314e83cb469f50535a8622bf9, type: 3}

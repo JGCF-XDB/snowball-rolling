@@ -13,9 +13,15 @@ namespace SnowballArena
     [DefaultExecutionOrder(-20)]
     public sealed class SnowballImpact : MonoBehaviour
     {
+        // Closing speed (m/s) along the contact normal below which neither ball is treated as
+        // the attacker. Kept small so a slow shove still counts, which is the usual kill.
+        private const float KnockAttributionSpeed = 0.35f;
+
         private SnowballBody ball;
         private Vector3 stepStartVelocity;
         private bool primed;
+
+        public Vector3 StepStartVelocity => primed ? stepStartVelocity : Vector3.zero;
 
         private void Awake() => ball = GetComponent<SnowballBody>();
 
@@ -46,10 +52,30 @@ namespace SnowballArena
             if (settings == null) return;
             // A resting contact has no approach speed; only a real impact is worth judging.
             if (entering && collision.relativeVelocity.magnitude < settings.impactSpeedThreshold) return;
+            RecordKnockAttribution(collision, other);
             Vector3 velocity = body.linearVelocity;
             if (!TryClamp(velocity.y, stepStartVelocity.y, settings, entering, out float clamped)) return;
             velocity.y = clamped;
             body.linearVelocity = velocity;
+        }
+
+        // Attribution runs on the pre-step velocities projected onto the contact normal (which
+        // points from the other ball towards this one). Only the ball actually closing along that
+        // axis is recorded, so a ball glancing past, or one already falling, is never named as the
+        // attacker, and a slow sustained shove still is.
+        private void RecordKnockAttribution(Collision collision, SnowballBody other)
+        {
+            if (collision.contactCount == 0) return;
+            var otherBody = other.RigidBody;
+            if (otherBody == null) return;
+            Vector3 normal = collision.GetContact(0).normal;
+            Vector3 otherStart = other.TryGetComponent(out SnowballImpact otherImpact)
+                ? otherImpact.StepStartVelocity
+                : otherBody.linearVelocity;
+            float closing = Vector3.Dot(stepStartVelocity - otherStart, normal);
+            // Negative closing means this ball is the one driving into the other.
+            if (closing < -KnockAttributionSpeed) other.RecordKnock(ball);
+            else if (closing > KnockAttributionSpeed) ball.RecordKnock(other);
         }
 
         // Clips upward speed that a snowball contact added. The allowance only applies to
