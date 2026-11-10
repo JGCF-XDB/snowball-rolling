@@ -28,6 +28,9 @@ namespace SnowballArena
         [Min(0f)] public float threatRadius = 8f;
         [Tooltip("Seconds spent stepping aside from a heavier charge.")]
         [Min(0f)] public float evadeSeconds = 0.6f;
+        [Header("Cannon dodge")]
+        [Tooltip("Extra clearance kept outside a cannon lane, on top of both radii, in metres.")]
+        [Min(0f)] public float cannonDodgeMargin = 0.9f;
         [Header("Crowd escape")]
         [Tooltip("Extra distance beyond the two radii that counts as crowding, in metres.")]
         [Min(0f)] public float crowdGap = 1.5f;
@@ -69,6 +72,14 @@ namespace SnowballArena
             if (speed > 0.25f && Clearance(velocity / speed, stoppingDistance + 0.6f) < stoppingDistance + 0.3f)
             {
                 self.motor.SetMoveDirection(-velocity.normalized);
+                return;
+            }
+
+            // A cannon shell cannot be blocked or out-muscled, and the warning line drawn on
+            // deploy is its exact trajectory, so clearing the lane outranks every other intent.
+            if (TryCannonDodge(position, out Vector3 dodge))
+            {
+                DriveSafely(dodge, braking, velocity, SpeedCap(ball));
                 return;
             }
 
@@ -304,6 +315,56 @@ namespace SnowballArena
             // dangerous regardless of mass.
             if (massRatio < threatMassRatio && approach < evadeApproachSpeed) return false;
             score = approach * (0.5f + massRatio) / Mathf.Max(1f, distance);
+            return true;
+        }
+
+        // The warning line drawn during deploy is the shell's exact path, so the safe move is
+        // sideways off it. A flying shell is only dangerous until it has passed the bot; after
+        // that it keeps going and never comes back.
+        private bool TryCannonDodge(Vector3 position, out Vector3 direction)
+        {
+            direction = Vector3.zero;
+            var cannon = match.Cannon;
+            if (cannon == null) return false;
+            bool closestSet = false;
+            float closest = float.MaxValue;
+            foreach (var state in cannon.Cannons)
+            {
+                if (state.Stage != CannonStage.Warning && state.Stage != CannonStage.Flying) continue;
+                bool flying = state.Stage == CannonStage.Flying;
+                if (!IsInLanePath(position, self.body.Radius, cannon.projectileRadius, cannonDodgeMargin,
+                        state.LaneStart, state.LaneEnd, flying, state.ShotPosition, out Vector3 escape)) continue;
+                float lateral = (Flat(position - state.LaneStart)
+                    - Vector3.Project(Flat(position - state.LaneStart), Flat(state.LaneEnd - state.LaneStart).normalized)).magnitude;
+                if (closestSet && lateral >= closest) continue;
+                closest = lateral; closestSet = true; direction = escape;
+            }
+            if (!closestSet) return false;
+            direction = ChooseHeading(direction);
+            return Clearance(direction, 3f) > 1.2f;
+        }
+
+        // Pure geometry so the decision can be checked without a live match: is this ball inside
+        // the kill corridor of one lane, and if so which way leads out of it? Both radii plus a
+        // margin are kept clear, because the sweep test that kills a ball is that wide.
+        public static bool IsInLanePath(Vector3 position, float bodyRadius, float projectileRadius,
+            float margin, Vector3 laneStart, Vector3 laneEnd, bool shellFlying, Vector3 shotPosition,
+            out Vector3 escape)
+        {
+            escape = Vector3.zero;
+            Vector3 lane = Flat(laneEnd - laneStart);
+            float length = lane.magnitude;
+            if (length < 0.1f) return false;
+            Vector3 along = lane / length;
+            Vector3 offset = Flat(position - laneStart);
+            float travelled = Vector3.Dot(offset, along);
+            Vector3 lateralOffset = offset - along * travelled;
+            if (lateralOffset.magnitude >= bodyRadius + Mathf.Max(0.1f, projectileRadius) + margin) return false;
+            // Past either end of the lane the shell can never reach this ball.
+            if (travelled < -bodyRadius || travelled > length + bodyRadius) return false;
+            if (shellFlying && Vector3.Dot(Flat(shotPosition - laneStart), along) > travelled + bodyRadius) return false;
+            Vector3 side = Vector3.Cross(along, Vector3.up);
+            escape = Vector3.Dot(lateralOffset, side) >= 0f ? side : -side;
             return true;
         }
 
