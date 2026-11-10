@@ -169,7 +169,7 @@ namespace SnowballArena
                 for (int i = 1; i < match.Participants.Count; i++)
                 {
                     contacts += trackers[i].Contacts;
-                    if (!match.Participants[i].alive && !trackers[i].Hit) untouchedFalls++;
+                    if (!match.Participants[i].alive && match.Participants[i].eliminationCause == EliminationCause.Fall && !trackers[i].Hit) untouchedFalls++;
                 }
                 checks.Add($"Natural {count}-bot match: time={Time.time - started:F1}s, contacts={contacts}, falls before any contact={untouchedFalls}, remaining={match.Remaining}, result={match.Result}");
                 bool result = count == 1 ? match.Phase == MatchPhase.Results && match.Participants[1].alive && !match.Participants[0].alive :

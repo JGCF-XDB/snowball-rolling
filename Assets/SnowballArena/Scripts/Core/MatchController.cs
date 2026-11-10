@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 namespace SnowballArena
 {
     public enum MatchPhase { Menu, Countdown, Running, Results }
+    public enum EliminationCause { None, Fall, Cannon }
     public sealed class MatchParticipant
     {
         public SnowballBody body;
@@ -13,6 +14,7 @@ namespace SnowballArena
         public bool alive = true;
         public string displayName;
         public bool isPlayer;
+        public EliminationCause eliminationCause;
     }
 
     public sealed class MatchController : MonoBehaviour
@@ -28,9 +30,16 @@ namespace SnowballArena
         public string Result { get; private set; }
         public string Notice { get; private set; }
         public float Countdown { get; private set; }
+        public CannonDirector Cannon { get; private set; }
         private readonly List<Material> ownedMaterials = new List<Material>();
         private GUIStyle title, heading, label, small, button;
         private Font font;
+        private void Awake()
+        {
+            Cannon = GetComponent<CannonDirector>();
+            if (Cannon == null) Cannon = gameObject.AddComponent<CannonDirector>();
+            Cannon.match = this;
+        }
 
         private void Update()
         {
@@ -99,7 +108,20 @@ namespace SnowballArena
             }
         }
 
-        private void FixedUpdate() => ResolveEliminations();
+        private void FixedUpdate()
+        {
+            if (Phase == MatchPhase.Running) Cannon.Advance(Time.fixedDeltaTime);
+            ResolveEliminations();
+        }
+        public void Eliminate(MatchParticipant participant, EliminationCause cause)
+        {
+            if (Phase != MatchPhase.Running || participant == null || !participant.alive) return;
+            participant.alive = false; participant.motor.controlEnabled = false;
+            participant.eliminationCause = cause;
+            participant.body.GetComponent<SnowballGrowth>().enabled = false;
+            participant.body.gameObject.SetActive(false);
+            if (participant.isPlayer) Notice = cause == EliminationCause.Cannon ? "你被炮弹击中" : "你掉出了平台";
+        }
         public void ResolveEliminations()
         {
             if (Phase != MatchPhase.Running) return;
@@ -109,8 +131,7 @@ namespace SnowballArena
             {
                 if (participant.alive && participant.body.RigidBody.position.y < surface.definition.fallHeight)
                 {
-                    participant.alive = false; participant.motor.controlEnabled = false;
-                    participant.body.gameObject.SetActive(false);
+                    Eliminate(participant, EliminationCause.Fall);
                 }
                 if (participant.alive) { Remaining++; survivor = participant; }
             }
@@ -121,6 +142,7 @@ namespace SnowballArena
             {
                 Result = Remaining == 0 ? (botCount == 0 ? "练习结束" : "平局") : survivor.isPlayer ? "你赢了！" : survivor.displayName + " 获胜";
                 Phase = MatchPhase.Results;
+                Cannon.Stop();
                 foreach (var participant in Participants)
                 {
                     participant.motor.controlEnabled = false;
@@ -134,6 +156,7 @@ namespace SnowballArena
         public void ReturnToMenu() { ClearParticipants(); Phase = MatchPhase.Menu; Notice = null; }
         private void ClearParticipants()
         {
+            if (Cannon != null) Cannon.ResetRound();
             foreach (var participant in Participants)
                 if (participant.body != null) { participant.body.gameObject.SetActive(false); Destroy(participant.body.gameObject); }
             Participants.Clear(); Remaining = 0;
@@ -161,7 +184,7 @@ namespace SnowballArena
             {
                 var r = new Rect(w / 2 - 230, h / 2 - 182, 460, 364); Panel(r);
                 GUI.Label(new Rect(r.x + 32, r.y + 22, 400, 52), "留在雪山之巅", title);
-                GUI.Label(new Rect(r.x + 32, r.y + 84, 400, 30), "最后留在平台上的雪球获胜", label);
+                GUI.Label(new Rect(r.x + 32, r.y + 84, 400, 30), "最后存活者获胜 · 60秒后炮击", label);
                 GUI.Label(new Rect(r.x + 32, r.y + 130, 250, 30), "机器人数量", label);
                 if (GUI.Button(new Rect(r.x + 32, r.y + 176, 60, 44), "−", button)) botCount = Mathf.Max(0, botCount - 1);
                 GUI.Label(new Rect(r.x + 116, r.y + 178, 210, 44), botCount == 0 ? "0  ·  自由练习" : botCount + "  位对手", heading);
@@ -171,11 +194,14 @@ namespace SnowballArena
             }
             else
             {
+                string hazardText = Phase == MatchPhase.Results ? $"对局 {Cannon.Elapsed:F0}s · 对局结束" : Cannon.Stage == CannonStage.Warning ? "炮击预警 · 即将发射" :
+                    Cannon.Stage == CannonStage.Flying ? "炮弹来袭 · 命中即出局" : $"对局 {Cannon.Elapsed:F0}s · 炮台 {Mathf.Max(0, Cannon.startAfterSeconds - Cannon.Elapsed):F0}s 后出现";
+                GUI.Label(new Rect(w / 2 - 170, 26, 340, 32), hazardText, label);
                 Panel(new Rect(w - 284, 22, 260, 123));
                 GUI.Label(new Rect(w - 266, 35, 235, 44), "场上剩余  " + Remaining, heading);
                 var player = Participants[0];
                 GUI.Label(new Rect(w - 266, 78, 235, 27), $"半径 {player.body.Radius:F2} m  ·  {player.body.RigidBody.mass:F0} kg", small);
-                GUI.Label(new Rect(w - 266, 109, 235, 27), player.alive ? "白色雪球是你" : "你已出局，观战中", small);
+                GUI.Label(new Rect(w - 266, 109, 235, 27), player.alive ? "白色雪球是你" : Notice == "你被炮弹击中" ? "炮弹命中，观战中" : "你已出局，观战中", small);
                 Panel(new Rect(24, h - 76, 550, 52));
                 GUI.Label(new Rect(44, h - 63, 520, 30), "WASD 移动   ·   Esc 返回菜单   ·   出局后 R 重开", small);
                 if (Phase != MatchPhase.Results && GUI.Button(new Rect(w - 230, h - 72, 206, 42), "返回菜单  ·  Esc", button)) ReturnToMenu();
