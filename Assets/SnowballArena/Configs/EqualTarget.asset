@@ -16,7 +16,7 @@ MonoBehaviour:
   density: 25
   driveForce: 874
   groundDrag: 50
-  minimumDriveAcceleration: 2.875
+  minimumDriveAcceleration: 4
   massControlExponent: 0.55
   massSpeedExponent: 0.08
   volumePerMetre: 0.16
