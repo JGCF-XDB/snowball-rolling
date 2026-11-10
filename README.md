@@ -29,8 +29,9 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 - 机器人持续追击与移动目标预判、按质量和速度计算刹车距离、沿真实地面检查边缘与孔洞、内侧绕行与边缘目标优先、受阻后后退蓄势并换角度冲撞。
 - 人机撞击评估：对手明显更重而自己速度不足时，先倒退拉开距离再加速冲撞；对手更重（1.2 倍以上）或来势过快（25 m/s 以上）时改为侧向闪避，不再硬顶；多个对手低速贴在一起时主动脱离球堆，避免抱团互相顶死。
 - 半径与质量显示、玩家身份与剩余人数提示。
+- 碰撞反馈：雪雾粒子、沿接触轴的压扁回弹、镜头抖动、强撞顿帧，以及随速度与体积变化的滚动声；界面点击、倒计时、胜负结算音效齐全。
 
-首版为可玩原型，环境是自行制作的简化低多边形场景，并非原视频美术资源的逐像素复刻。炮台和平台运动尚未实现，接口已预留。当前没有音乐和音效。
+首版为可玩原型，环境是自行制作的简化低多边形场景，并非原视频美术资源的逐像素复刻。炮台和平台运动尚未实现，接口已预留。当前没有背景音乐，音效见下节。
 
 ## 调参
 
@@ -60,6 +61,42 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 - 人机决策速度上限由当前驱动力与阻力推导，不再写死 18.9 m/s（旧值只有当前速度档位的三成多）。目标质量比达到 `chargeMassRatio`（默认 1.3）且自身速度低于 `chargeTriggerSpeed`（默认 12 m/s）时进入蓄势：后退 0.9 秒拉出距离后再冲撞，冷却 3 秒。闪避有两个触发条件：对手质量达到 `threatMassRatio`（默认 1.2）倍且接近速度超过 `threatApproachSpeed`（默认 10 m/s），或单纯接近速度超过 `evadeApproachSpeed`（默认 25 m/s，不看质量）。闪避持续 0.6 秒，方向垂直于来球轨迹并偏向平台内侧。`crowdMinimum`（2）个以上对手紧贴在 `crowdGap`（1.5 m）内且自身低于 `crowdBreakoutSpeed`（3 m/s）时，进入 0.45 秒的拥挤脱离状态，朝远离整堆球的合成方向开出去。以上阈值都在 BotBrain 的 Inspector 上可调。
 - 人机 `finishOpportunityWeight = 5` 提高临边淘汰机会的决策得分；这是规则权重，不是强化学习训练。内侧贴近临边对手时锁定目标、取消低速撤退和绕行，持续施压；撞击暂时拉开距离后仍追击，摩擦顶死时小幅调整接触角度并保持向前施压。只有机会消失或自身需要刹车避险时才改变策略。刹车预测与移动控制使用同一质量曲线。
 - 球根物体缩放保持 (1,1,1)，由 SnowballBody 更新球形碰撞半径与视觉子物体尺寸。
+
+## 音效与碰撞反馈
+
+全部音频在 `Assets/SnowballArena/Audio`，逐文件许可说明见同目录 `LICENSE.txt`。除滚动循环外均为 **Kenney CC0** 素材，可商用、无需署名。
+
+| 用途 | 文件 | 来源 |
+| --- | --- | --- |
+| 球–球撞击（轻/重） | `Impact/impactSoft_medium_*`、`impactSoft_heavy_*`、`impactPunch_heavy_*` | Kenney Impact Sounds, CC0 |
+| 落地与雪地触地 | `Roll/footstep_snow_*` | Kenney Impact Sounds, CC0 |
+| 滚动循环 | `Roll/roll_snow_loop.wav` | 本项目程序生成（滤波噪声，无缝循环） |
+| 菜单点击与悬停 | `UI/click1..3`、`rollover1..2` | Kenney UI Audio, CC0 |
+| 开始与倒计时 | `Interface/confirmation_001`、`tick_001` | Kenney Interface Sounds, CC0 |
+| 胜利与失败 | `Jingle/jingle_victory`（音高上行）、`jingle_defeat`（下行） | Kenney Music Jingles, CC0 |
+| 菜单 / 对局背景音乐 | `Music/menu_theme.ogg`（25 s 循环）、`Music/match_theme.ogg`（24 s 循环） | OpenGameArt, CC0 |
+
+运行时结构（均为自动挂载，不需要改场景或预制体）：
+
+- `Scripts/Presentation/AudioLibrary.cs`：资源表，构建到 `Assets/Resources/SnowballAudioLibrary.asset`；增删音频后跑菜单 `Snowball Arena > Build Audio Library` 重新生成。
+- `Scripts/Presentation/ArenaFeedback.cs`：场景加载后自动创建的单例，负责 10 路 3D 定位 AudioSource 池、雪雾粒子、`CameraShake` 与顿帧。批处理模式自动跳过音频与顿帧，自动化对局节奏不受影响。
+- `Scripts/Presentation/SnowballFeedback.cs`：由 `SnowballBody.Initialize` 自动挂载，负责碰撞上报（球–球碰撞只上报一次）、沿接触轴压扁视觉网格、按速度调制滚动循环音。
+- `Scripts/Presentation/CameraShake.cs`：正交固定镜头的位置抖动，幅度与时长随冲击强度变化；只偏移 localPosition，不旋转镜头。
+
+冲击强度由接近速度映射到 0..1：低于 `minimumImpactSpeed`（2.5 m/s）忽略，`maximumImpactSpeed`（45 m/s）为满强度。反馈是分级的，镜头动作只留给真正的重撞：
+
+| 强度 | 表现 |
+| --- | --- |
+| < 0.62 | 只有音效、雪雾与挤压（`shakeThreshold` 以下完全不震屏） |
+| ≥ 0.62 | 镜头轻震，幅度 0.07～0.30、时长 0.10～0.17 s |
+| ≥ 0.85 | 雪雾额外爆开一圈（更大的颗粒与初速） |
+| ≥ 0.90 | 顿帧 20～35 ms，`timeScale` 降到 0.15 后恢复 |
+
+球体挤压的深度跟随冲击强度按 `strength^1.5` 缩放：轻碰几乎不变形（3 m/s 约 1.8%），满强度（28 m/s）才达到 `maximumSquash`（默认 34%），并在弹簧回弹时出现轻微过冲。
+
+滚动音的音高按球半径开方反比降低，所以大球滚动更低沉。
+
+开发版音频自检：`--audio-check <输出目录>` 会写出音频子系统状态（`outputSampleRate`、驱动能力）、AudioListener 数量与所在对象、每个 clip 的时长，以及播放后 `AudioSource.time` 是否推进，用来区分“设备没出声”与“代码没调用”。实测参考值：采样率 48000、listener 在 Main Camera、撞击音 `time` 会从 0 递增。另外 `ArenaFeedback` 在启动时设 `Application.runInBackground = true`，避免窗口失焦时 Unity 自动暂停音频。背景音乐由 `ArenaFeedback.UpdateMusic` 按对局阶段切换：菜单播 `menu_theme`，倒计时与对局播 `match_theme`，结算阶段静音以突出胜负 jingle；音量 `musicVolume`（默认 0.32）与音效音量互不干扰。两条音乐的 RMS 响度接近（菜单 ~13 dB、对局 ~12 dB），切换时不会出现“突然听不见”。滚动循环音默认 `rollVolume` 0.35、`maxDistance` 38，避免多球同时滚动时盖过碰撞声。
 
 ## 平台扩展
 

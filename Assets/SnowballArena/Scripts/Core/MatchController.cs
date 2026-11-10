@@ -29,6 +29,7 @@ namespace SnowballArena
         public string Notice { get; private set; }
         public float Countdown { get; private set; }
         private readonly List<Material> ownedMaterials = new List<Material>();
+        private int lastCountdownSecond = -1;
         private GUIStyle title, heading, label, small, button;
         private Font font;
 
@@ -40,8 +41,8 @@ namespace SnowballArena
                 if (keyboard.escapeKey.wasPressedThisFrame) ReturnToMenu();
                 if (Phase == MatchPhase.Menu)
                 {
-                    if (keyboard.leftArrowKey.wasPressedThisFrame) botCount = Mathf.Max(0, botCount - 1);
-                    if (keyboard.rightArrowKey.wasPressedThisFrame) botCount = Mathf.Min(15, botCount + 1);
+                    if (keyboard.leftArrowKey.wasPressedThisFrame) { botCount = Mathf.Max(0, botCount - 1); Click(); }
+                    if (keyboard.rightArrowKey.wasPressedThisFrame) { botCount = Mathf.Min(15, botCount + 1); Click(); }
                     if (keyboard.enterKey.wasPressedThisFrame) StartMatch(botCount);
                 }
                 else if (keyboard.rKey.wasPressedThisFrame && (Phase == MatchPhase.Results || Participants.Count > 0 && !Participants[0].alive)) StartMatch(botCount);
@@ -49,9 +50,14 @@ namespace SnowballArena
             if (Phase == MatchPhase.Countdown)
             {
                 Countdown -= Time.deltaTime;
+                int second = Mathf.CeilToInt(Mathf.Max(0f, Countdown));
+                if (second != lastCountdownSecond) { lastCountdownSecond = second; Tick(); }
                 if (Countdown <= 0) BeginRunning();
             }
         }
+
+        private static void Click() { if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.UiClick(); }
+        private static void Tick() { if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.UiTick(); }
 
         public bool StartMatch(int bots)
         {
@@ -83,7 +89,8 @@ namespace SnowballArena
                 motor.controlEnabled = false;
                 instance.GetComponent<SnowballGrowth>().enabled = false;
             }
-            Remaining = Participants.Count; Countdown = countdownSeconds; Phase = MatchPhase.Countdown;
+            Remaining = Participants.Count; Countdown = countdownSeconds; lastCountdownSecond = -1; Phase = MatchPhase.Countdown;
+            if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.UiConfirm();
             return true;
         }
 
@@ -121,6 +128,7 @@ namespace SnowballArena
             {
                 Result = Remaining == 0 ? (botCount == 0 ? "练习结束" : "平局") : survivor.isPlayer ? "你赢了！" : survivor.displayName + " 获胜";
                 Phase = MatchPhase.Results;
+                if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.Result(Remaining == 1 && survivor != null && survivor.isPlayer);
                 foreach (var participant in Participants)
                 {
                     participant.motor.controlEnabled = false;
@@ -131,7 +139,7 @@ namespace SnowballArena
             }
         }
 
-        public void ReturnToMenu() { ClearParticipants(); Phase = MatchPhase.Menu; Notice = null; }
+        public void ReturnToMenu() { ClearParticipants(); Phase = MatchPhase.Menu; Notice = null; Click(); }
         private void ClearParticipants()
         {
             foreach (var participant in Participants)
@@ -163,9 +171,9 @@ namespace SnowballArena
                 GUI.Label(new Rect(r.x + 32, r.y + 22, 400, 52), "留在雪山之巅", title);
                 GUI.Label(new Rect(r.x + 32, r.y + 84, 400, 30), "最后留在平台上的雪球获胜", label);
                 GUI.Label(new Rect(r.x + 32, r.y + 130, 250, 30), "机器人数量", label);
-                if (GUI.Button(new Rect(r.x + 32, r.y + 176, 60, 44), "−", button)) botCount = Mathf.Max(0, botCount - 1);
+                if (GUI.Button(new Rect(r.x + 32, r.y + 176, 60, 44), "−", button)) { botCount = Mathf.Max(0, botCount - 1); Click(); }
                 GUI.Label(new Rect(r.x + 116, r.y + 178, 210, 44), botCount == 0 ? "0  ·  自由练习" : botCount + "  位对手", heading);
-                if (GUI.Button(new Rect(r.x + 368, r.y + 176, 60, 44), "+", button)) botCount = Mathf.Min(15, botCount + 1);
+                if (GUI.Button(new Rect(r.x + 368, r.y + 176, 60, 44), "+", button)) { botCount = Mathf.Min(15, botCount + 1); Click(); }
                 if (GUI.Button(new Rect(r.x + 32, r.y + 245, 396, 48), "开始游戏  ·  Enter", button)) StartMatch(botCount);
                 GUI.Label(new Rect(r.x + 32, r.y + 313, 410, 30), Notice ?? "← → 调整人数    WASD 控制白色雪球", small);
             }

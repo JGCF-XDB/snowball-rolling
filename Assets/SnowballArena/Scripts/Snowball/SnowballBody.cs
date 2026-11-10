@@ -19,6 +19,7 @@ namespace SnowballArena
             // Added at runtime so every existing prefab and scene keeps working without
             // re-authoring components; it only clips upward speed created by a snowball hit.
             if (!TryGetComponent(out SnowballImpact _)) gameObject.AddComponent<SnowballImpact>();
+            if (!TryGetComponent(out SnowballFeedback _)) gameObject.AddComponent<SnowballFeedback>();
             Radius = settings.initialRadius;
             Volume = (4d / 3d) * System.Math.PI * Radius * Radius * Radius;
             GetComponent<SphereCollider>().radius = Radius;
