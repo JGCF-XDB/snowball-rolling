@@ -46,6 +46,7 @@ namespace SnowballArena
             var side = Vector3.Cross(Vector3.up, direction);
             Check(Vector3.Distance(new Vector3(center.x, 0, center.z), match.surface.AimPoint) < 0.1f
                 && Vector3.Distance(cannon.LaneStart, cannon.LaneEnd) > 21.5f, "Warning follows the real full diameter through the center");
+            CheckWarning(cannon.Cannons[0]);
             Place(0, center); Place(1, cannon.LaneStart + direction * 4f); Place(2, center + side * 4); Place(3, center - side * 4);
             cannon.Advance(0.001f); Capture("cannon-warning.png");
             cannon.Advance(0.499f);
@@ -162,6 +163,34 @@ namespace SnowballArena
                 && Mathf.Abs(state.visuals.muzzleInnerDiameter * state.visuals.transform.lossyScale.x - match.Cannon.projectileRadius * 2) < 0.001f,
                 "Modeled muzzle stays at the firing origin and its inner diameter equals the projectile diameter");
         }
+        private void CheckWarning(CannonState state)
+        {
+            var warning = state.warning;
+            Check(warning.sharedMaterial.shader.name == "SnowArena/CannonWarning" && warning.sharedMaterial.shader.isSupported,
+                "Player build includes the supported infrared gradient warning shader");
+            var mesh = new Mesh();
+            try
+            {
+                // Inspect rendered geometry, including both edges of the gradient
+                // ribbon. A camera-facing ribbon would fail the height and platform checks.
+                warning.BakeMesh(mesh, Camera.main, true);
+                bool grounded = mesh.vertexCount >= 4;
+                bool inFront = true;
+                Vector3 direction = (state.LaneEnd - state.LaneStart).normalized;
+                var collider = match.surface.GetComponent<Collider>();
+                float laneLength = Vector3.Distance(state.LaneStart, state.LaneEnd);
+                foreach (var vertex in mesh.vertices)
+                {
+                    grounded &= collider.Raycast(new Ray(vertex + Vector3.up, Vector3.down), out var hit, 2)
+                        && vertex.y - hit.point.y > 0 && vertex.y - hit.point.y < 0.05f;
+                    float along = Vector3.Dot(vertex - state.LaneStart, direction);
+                    inFront &= along > 0.1f && along < laneLength - 0.1f;
+                }
+                Check(grounded, "Entire infrared ribbon stays just above supported snow instead of standing across the cannon");
+                Check(inFront, "Warning geometry begins in front of the muzzle and ends inside the opposite platform rim");
+            }
+            finally { Destroy(mesh); }
+        }
         private void RunSelectedVisuals()
         {
             var cannon = match.Cannon;
@@ -269,6 +298,7 @@ namespace SnowballArena
             checks.Add($"60-second boundary: elapsed={cannon.Elapsed:R}, active={cannon.ActiveCannonCount}, warnings={cannon.WarningCount}, thirdFlash={(cannon.ActiveCannonCount > 2 ? cannon.Cannons[2].FlashCount : -1)}");
             Check(cannon.ActiveCannonCount == 3 && cannon.Cannons[2].WarningVisible && cannon.Cannons[2].FlashCount == 1,
                 "At 60 seconds third cannon joins with its own full warning");
+            foreach (var state in cannon.Cannons) CheckWarning(state);
             CheckAngles("Three cannons use different non-overlapping diameters");
             Capture("cannon-three.png");
             bool bounded = true, spaced = true;

@@ -1,0 +1,6 @@
+Production warning rendered in the Unity scene; no scene saves.
+Core width: approximately 0.103 m; gradient ribbon width: 0.54 m.
+Across the width: vivid red core, two-stage soft glow fading to a transparent edge.
+Along the lane: low frequency energy variation, tapered ends, slow breathing and a travelling highlight.
+Ground offset: 0.035 m; boundary inset: 0.18 m; normal depth testing.
+Lane start: (-9.45, 0.80, 5.60); lane end: (9.45, 0.80, -5.60).
