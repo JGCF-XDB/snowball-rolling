@@ -103,7 +103,7 @@ namespace SnowballArena
             for (int i = 1; i < match.Participants.Count; i++)
             {
                 totalContacts += contacts[i].Contacts;
-                if (!match.Participants[i].alive && !contacts[i].Hit) untouchedFalls++;
+                if (!match.Participants[i].alive && match.Participants[i].eliminationCause == EliminationCause.Fall && !contacts[i].Hit) untouchedFalls++;
             }
             checks.Add($"Bot contacts={totalContacts}, falls before any contact={untouchedFalls}");
             if (!Check(contacts[0].Hit && untouchedFalls == 0 && match.Remaining < 16 &&
