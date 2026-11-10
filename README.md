@@ -172,6 +172,8 @@ elastic-collision 曾将雪球间恢复系数从 0.65 调至 0.95，平台接触
 
 CannonDirector 管理等待、预警、飞行状态，MatchController 在每个物理步驱动计时和统一淘汰结算。命中检测对炮弹及雪球的相对移动做扫掠，避免高速穿透漏判。ArenaSurface.TryGetCannonLane 使用实际平台边界，并为后续不同平台形状提供重写接口。目前沿生成时的静态世界路径发射。
 
+炮台、炮弹和预警线共用比赛相机的 layer 0，避免被只负责远山的 layer 2 相机错误取景。正式对局采用 Blender 制作的暗色 B 冰晶长管炮和冰壳核心弹，保留三层六角底座和冰晶支撑，炮管约 3.21 m 长，圆口为 48 段细分与倒角，炮口内径和炮弹外径均为 0.60 m。符文随预警线闪烁；发射时出现柔边圆形辉光和炮管后坐；炮弹具有圆弧端面，飞行时显示旋转与最长约 2.16 m 的橙色短拖尾；命中后有 0.30 s 的冰晶余烬消散。动效没有额外碰撞或范围伤害，并随结算、重开和返回菜单清理。资源、源文件、实机预览与重建说明见 [暗色 B 大炮与炮弹](docs/art/selected-cannon-b/README.md)。
+
 参数位于 Scripts/Arena/CannonDirector.cs：startAfterSeconds、escalationInterval、flashHalfPeriod、projectileSpeed、projectileRadius。场景中的 MatchController 启动时自动挂载该组件。菜单 Snowball Arena > Build Cannon Game 可准备预警材质并打包；已有 Resources/CannonSignal.mat 后，普通 Windows 打包入口同样可用。
 
 开发包支持 --cannon-smoke <输出目录>，包含炮台专项计时、三次预警、最近命中与单发单目标、高速相交、40/60 秒升级、多炮同时发射与独立命中、持续换位、胜负及清理检查，并输出预警和飞行画面（相机图不含 OnGUI）。其他对局验证把炮弹淘汰与自行落台分开统计。
