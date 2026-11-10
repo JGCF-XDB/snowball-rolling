@@ -77,6 +77,26 @@ namespace SnowballArena.Editor
             Check("Unequal masses conserve momentum", () => Collision(1f, 0f, false));
             Check("Oblique collision conserves vector momentum", () => Collision(0.85f, 0.7f, false));
             Check("Fast sphere collision is detected", () => Collision(0.65f, 0f, true));
+            Check("Elastic gameplay contact transfers speed between equal masses", () => Collision(0.65f, 0f, true, true));
+            Check("Fast attacker rebounds from heavier opponent with conserved momentum", () => Collision(1f, 0f, true, true));
+            Check("Lighter opponent receives greater speed without extra energy", () => Collision(0.45f, 0f, true, true));
+            Check("Gameplay ground settles a dropped ball without repeated bouncing", () =>
+            {
+                using var world = new World(); world.Platform();
+                foreach (var root in world.scene.GetRootGameObjects())
+                    if (root.TryGetComponent<BoxCollider>(out var floor))
+                        floor.sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.GroundMaterialPath);
+                var ball = world.Ball(new Vector3(0, 3, 0), gravity: true);
+                ball.GetComponent<SphereCollider>().sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.BallMaterialPath);
+                float lateHeight = 0;
+                for (int i = 0; i < 240; i++)
+                {
+                    world.Simulate(1f / 120);
+                    if (i >= 120) lateHeight = Mathf.Max(lateHeight, ball.RigidBody.position.y - ball.Radius);
+                }
+                Require(lateHeight < 0.1f && Mathf.Abs(ball.RigidBody.linearVelocity.y) < 0.1f, "Ground inherited high ball-to-ball restitution");
+                return $"Height above ground after first second <= {lateHeight:F4} m";
+            });
             Check("Accretion conserves incoming linear and angular momentum", () =>
             {
                 using var world = new World(); var ball = world.Ball(Vector3.up * 5);
@@ -152,6 +172,15 @@ namespace SnowballArena.Editor
                 }
                 return string.Join("; ", details);
             });
+            Check("Grown mass bonus strengthens impact with conserved momentum and no collision energy gain", () =>
+            {
+                var baseline = MeasureGrownImpact(1f);
+                var boosted = MeasureGrownImpact(1.1f);
+                Require(boosted.mass > baseline.mass * 1.14f && boosted.mass < baseline.mass * 1.16f, "Unexpected four-volume mass bonus");
+                Require(boosted.targetSpeed > baseline.targetSpeed && boosted.attackerSpeed > baseline.attackerSpeed,
+                    "Heavy attacker did not transfer more speed and retain more forward velocity");
+                return $"Same size and 10 m/s approach: mass {baseline.mass:F2}->{boosted.mass:F2} kg, target {baseline.targetSpeed:F2}->{boosted.targetSpeed:F2} m/s, attacker {baseline.attackerSpeed:F2}->{boosted.attackerSpeed:F2} m/s";
+            });
             Check("Growth has no gameplay size cap and reset clears history", () =>
             {
                 using var world = new World(); var ball = world.Ball(Vector3.zero);
@@ -167,10 +196,19 @@ namespace SnowballArena.Editor
             if (report.failed > 0) throw new Exception(report.failed + " growth/collision checks failed");
         }
 
-        private static string Collision(float otherRadius, float offset, bool fast)
+        private static string Collision(float otherRadius, float offset, bool fast, bool gameplay = false)
         {
             using var world = new World();
             var a = world.Ball(new Vector3(-3, 5, 0)); var b = world.Ball(new Vector3(0, 5, offset), otherRadius);
+            float restitution = 0.6f;
+            if (gameplay)
+            {
+                var contact = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.BallMaterialPath);
+                a.GetComponent<SphereCollider>().sharedMaterial = contact;
+                b.GetComponent<SphereCollider>().sharedMaterial = contact;
+                restitution = contact.bounciness;
+                Require(Mathf.Abs(restitution - 0.95f) < 0.001f, "Wrong gameplay restitution");
+            }
             var initialVelocity = Vector3.right * (fast ? 80 : 6);
             a.RigidBody.linearVelocity = initialVelocity;
             var initialMomentum = a.RigidBody.mass * initialVelocity;
@@ -183,8 +221,15 @@ namespace SnowballArena.Editor
             Require(a.Volume == firstVolume && b.Volume == secondVolume, "Collision reduced or altered volume");
             if (offset == 0)
             {
-                float expected = ((a.RigidBody.mass - 0.6f * b.RigidBody.mass) / (a.RigidBody.mass + b.RigidBody.mass)) * initialVelocity.x;
+                float expected = ((a.RigidBody.mass - restitution * b.RigidBody.mass) / (a.RigidBody.mass + b.RigidBody.mass)) * initialVelocity.x;
                 Require(Mathf.Abs(a.RigidBody.linearVelocity.x - expected) < 0.08f, "Head-on result differs from impulse solution");
+            }
+            if (gameplay)
+            {
+                float before = a.RigidBody.mass * initialVelocity.sqrMagnitude;
+                float after = a.RigidBody.mass * a.RigidBody.linearVelocity.sqrMagnitude + b.RigidBody.mass * b.RigidBody.linearVelocity.sqrMagnitude;
+                Require(after <= before * 1.001f, "Collision created kinetic energy");
+                if (otherRadius > 0.65f) Require(a.RigidBody.linearVelocity.x < -1f, "Fast attacker did not rebound from heavier target");
             }
             return $"Relative momentum error={relativeError:E3}, v1={a.RigidBody.linearVelocity}, v2={b.RigidBody.linearVelocity}";
         }
@@ -199,9 +244,10 @@ namespace SnowballArena.Editor
                 ball.settings.driveForce = 520; ball.settings.groundDrag = 40;
                 ball.settings.minimumDriveAcceleration = 0; ball.settings.massControlExponent = 1;
                 ball.settings.massSpeedExponent = 0;
+                ball.settings.massGrowthExponent = 1f;
             }
             ball.GetComponent<SphereCollider>().sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(PrototypeBuilder.Root + "/Materials/SnowContact.physicMaterial");
-            ball.Accrete(ball.Volume * (massRatio - 1), Vector3.zero, true);
+            ball.Accrete(ball.Volume * (Math.Pow(massRatio, 1d / ball.settings.massGrowthExponent) - 1d), Vector3.zero, true);
             Physics.SyncTransforms();
             var motor = ball.GetComponent<SnowballMotor>();
             for (int i = 0; i < 30; i++) { motor.SimulateDrive(); world.Simulate(1f / 60); }
@@ -211,6 +257,24 @@ namespace SnowballArena.Editor
             motor.SetMoveDirection(Vector3.forward);
             for (int i = 0; i < 36; i++) { motor.SimulateDrive(); world.Simulate(1f / 60); }
             return (speed, ball.RigidBody.linearVelocity.z);
+        }
+
+        private static (float mass, float targetSpeed, float attackerSpeed) MeasureGrownImpact(float exponent)
+        {
+            using var world = new World();
+            var a = world.Ball(new Vector3(-4, 5, 0)); var b = world.Ball(new Vector3(0, 5, 0));
+            a.settings.massGrowthExponent = exponent;
+            a.Accrete(a.Volume * 3, Vector3.zero, false);
+            var contact = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.BallMaterialPath);
+            a.GetComponent<SphereCollider>().sharedMaterial = contact; b.GetComponent<SphereCollider>().sharedMaterial = contact;
+            a.RigidBody.linearVelocity = Vector3.right * 10;
+            float mass = a.RigidBody.mass, initialMomentum = mass * 10, initialEnergy = mass * 100;
+            for (int i = 0; i < 120; i++) world.Simulate(1f / 120);
+            Vector3 momentum = mass * a.RigidBody.linearVelocity + b.RigidBody.mass * b.RigidBody.linearVelocity;
+            float energy = mass * a.RigidBody.linearVelocity.sqrMagnitude + b.RigidBody.mass * b.RigidBody.linearVelocity.sqrMagnitude;
+            Require((momentum - Vector3.right * initialMomentum).magnitude < initialMomentum * 0.001f, "Mass bonus broke collision momentum conservation");
+            Require(energy <= initialEnergy * 1.001f, "Mass bonus collision created energy");
+            return (mass, b.RigidBody.linearVelocity.x, a.RigidBody.linearVelocity.x);
         }
 
         private static double FeedDistance(int steps)

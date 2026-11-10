@@ -7,6 +7,8 @@ namespace SnowballArena
     {
         [Min(0.1f)] public float initialRadius = 0.85f;
         [Min(1f)] public float density = 25f;
+        [Tooltip("Mass growth relative to initial volume. 1 is constant density; values above 1 strengthen grown snowballs.")]
+        [Range(1f, 1.5f)] public float massGrowthExponent = 1.1f;
         [Min(0f)] public float driveForce = 2517.12f;
         [Tooltip("Ground-only force per unit of horizontal speed. No hard speed clamp.")]
         [Min(0f)] public float groundDrag = 50f;
@@ -19,6 +21,13 @@ namespace SnowballArena
         [Min(0.01f)] public float supportProbeGap = 0.06f;
         [Range(0f, 1f)] public float minimumSupportNormal = 0.6f;
         public float InitialMass => density * (4f / 3f) * Mathf.PI * Mathf.Pow(initialRadius, 3);
+
+        public float MassForVolume(double volume)
+        {
+            double initialVolume = (4d / 3d) * System.Math.PI * initialRadius * initialRadius * initialRadius;
+            double ratio = System.Math.Max(1d, volume / initialVolume);
+            return (float)(density * volume * System.Math.Pow(ratio, massGrowthExponent - 1d));
+        }
 
         public float DriveForceForMass(float mass)
         {

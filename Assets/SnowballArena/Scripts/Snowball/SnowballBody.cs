@@ -48,7 +48,7 @@ namespace SnowballArena
             Vector3 oldVelocity = RigidBody.linearVelocity, oldSpin = RigidBody.angularVelocity;
             Volume += volume;
             Radius = (float)System.Math.Pow(Volume * 3d / (4d * System.Math.PI), 1d / 3d);
-            float newMass = (float)(settings.density * Volume);
+            float newMass = settings.MassForVolume(Volume);
             RigidBody.mass = newMass;
             GetComponent<SphereCollider>().radius = Radius;
             if (visual != null) visual.localScale = Vector3.one * (2f * Radius);
