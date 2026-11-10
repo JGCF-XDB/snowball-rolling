@@ -20,8 +20,8 @@ Shader "SnowArena/AlpineSky"
             half4 Frag(V input):SV_Target
             {
                 float y=normalize(input.direction).y;
-                half3 c=lerp(_Horizon.rgb,_Top.rgb,pow(saturate(y*1.7),0.7));
-                c=lerp(c,_Bottom.rgb,saturate(-y*1.3));
+                half3 c=lerp(_Horizon.rgb,_Top.rgb,pow(saturate((y+.26)*2.4),0.7));
+                c=lerp(c,_Bottom.rgb,saturate((-y-.27)*1.7));
                 return half4(c,1);
             }
             ENDHLSL

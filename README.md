@@ -4,7 +4,7 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 
 ## 运行
 
-本轮美术试玩版位于 `Builds/ConceptPreview/SnowballArena.exe`，原测试包位于 `Builds/Windows/SnowballArena.exe`。点击游戏窗口使其获得键盘焦点。必须保留同目录的 Data、MonoBleedingEdge 等运行依赖，不要只复制 exe。
+使用下文的构建菜单生成 `Builds/Windows/SnowballArena.exe`，然后双击运行并点击游戏窗口使其获得键盘焦点。必须保留同目录的 Data、MonoBleedingEdge 等运行依赖，不要只复制 exe。构建产物不进入 Git。
 
 在 Unity 中打开 `Assets/SnowballArena/Scenes/Match.unity` 后点击 Play。原模板 SampleScene 和物理练习场 Arena 都保留。
 
@@ -37,9 +37,11 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 
 [雪山竞技场与雪球建模设定](docs/art/README.md)包含环境多视图、模块拆分、雪球多视图与成长阶段，以及建模要求和生成提示词。
 
-正式对局已接入 Blender 制作的低多边形模型：三层浮空雪台、半透明冰层与冰晶边缘、分枝雪松、带主副峰和山脊的雪山，以及带卷雪螺旋纹、雪块和冰晶颗粒的雪球。玩家为红色描边的白色雪球，对手使用黄、绿、蓝、紫、橙等描边与浅色雪带区分。模型随物理滚动并按成长半径同步缩放。平台与雪球采用约 47° 的比赛视角，远山、外围小岛和云雾保持约 20° 的背景视角，两者独立取景。
+正式对局采用最终选定的 **01 方案**：三层浮空雪台、半透明冰层与冰晶边缘、分枝雪松、积雪台阶、分层岩台和谷底岩脊，以及带卷雪螺旋纹、雪块和冰晶颗粒的雪球。玩家为红色描边的白色雪球，对手使用黄、绿、蓝、紫、橙等描边与浅色雪带区分。雪球模型随物理滚动并按成长半径同步缩放。主平台、外围岩台及其雪松共用 **60° 对战相机**，远山和谷雾使用独立的 **17.5° 背景相机**。外围装饰不带碰撞体，主台保留连续、平坦的碰撞表面和完整的掉落边界。
 
-可编辑模型源文件为 `ArtSource/SnowArenaConcept.blend`，确定性建模与 FBX 导出脚本为 `Tools/Art/build_concept_assets.py`。用 Blender 4.5 LTS 执行该脚本后，菜单 `Snowball Arena > Apply Modeling Reference` 导入网格、生成材质与模块预制体并更新正式对局场景；随后使用 `Build Windows Game` 打包试玩。批处理 `ModelingReferenceBuilder.BuildConceptPreview` 验证并构建开发版供 smoke 测试；`BuildPlayablePreview` 输出同路径的普通试玩包，无开发调试连接。
+可编辑环境源文件为 `ArtSource/SelectedAlpine01.blend`，重建脚本为 `Tools/Art/build_selected_alpine.py`，对应的 Unity 网格、材质和模块预制体位于 `Assets/SnowballArena/Art/Selected01`。菜单 `Snowball Arena > Apply Selected Alpine 01`（或 `Apply Modeling Reference`）把已保存的 01 环境应用到正式对局；`Capture Selected Alpine 01` 导出预览；`Preview Camera Pitch` 打开 20°–80° 的编辑器俯角滑块。基础雪球和主台资源仍保留在 `ArtSource/SnowArenaConcept.blend`。完整重建与编辑说明见[美术文档](docs/art/README.md)。
+
+![01 方案正式对局场景预览，四颗雪球为摆放样本](docs/art/selected01/gameplay.png)
 
 ## 调参
 
@@ -127,6 +129,7 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 - `Validate Prototype Physics`：9 项移动、支撑、惯性、掉落、重置和输入方向检查。
 - `Validate Growth and Collisions`：20 项碰撞、成长、质量、帧分割一致性、不同质量下的加速/转向、生产材质弹性碰撞与落地稳定性检查；本轮新增“每个球都挂载碰撞修正”“高速水平撞击在求解器层面不产生向上速度”“撞击钳制不会逐帧累加”“等速对撞不会无限弹开”四项。
 - `ArenaExtensionValidation.Run`：矩形环支撑、孔洞出生和自定义中心检查。
+- `SelectedAlpineSceneBuilder.ValidatePhysics`：执行以上三组检查，并验证 60° 共用相机、背景相机堆栈、外围预制体与持久化网格、装饰无碰撞体和 16 个安全出生点。
 - 开发版 `--match-smoke <输出目录>`：自动检查菜单键盘、倒计时、输入、机器人运动、胜负、平局、观战、重开、0/15 机器人数与自然对局。
 - 开发版 `--bot-smoke <输出目录>`：从六个方向实际撞击静止玩家，检查八个方向的初始/成长雪球刹车、四个方向的边缘回场、边缘进攻、三种持续顶压抵抗者的场景、不追逐落台目标，以及 1/5 机器人的自然对局。
 - 单个人机必须自然击败静止玩家；5/15 人机长局检查每 30 秒仍有实际碰撞、攻击静止玩家、出现真实淘汰且没有首次碰撞前自行掉落。避险加强后，纯人机残局可能持续较长时间，因此不再以旧版的“150 秒内必须只剩一人”作为寻路验收条件。胜负仍严格按最后存活者判定，没有新增时间限制或自动淘汰。

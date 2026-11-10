@@ -17,6 +17,11 @@ namespace SnowballArena.Editor
         [MenuItem("Snowball Arena/Apply Modeling Reference")]
         public static void Apply()
         {
+            if (File.Exists(SelectedAlpineSceneBuilder.SourceScene))
+            {
+                SelectedAlpineSceneBuilder.Apply();
+                return;
+            }
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             var snow = Surface("ReferenceSnow", 0.10f, 1, 1);
@@ -78,17 +83,12 @@ namespace SnowballArena.Editor
                     throw new Exception("Invalid snowball silhouette: " + p);
             if (ball.triangles.Length / 3 > 8000) throw new Exception("Snowball triangle budget exceeded.");
             var arenaCamera = Camera.main;
-            var backgroundCamera = arenaCamera.GetComponent<ArenaCamera>().backgroundCamera;
-            float arenaPitch = Vector3.Angle(arenaCamera.transform.forward,Vector3.ProjectOnPlane(arenaCamera.transform.forward,Vector3.up));
-            float backgroundPitch = Vector3.Angle(backgroundCamera.transform.forward,Vector3.ProjectOnPlane(backgroundCamera.transform.forward,Vector3.up));
-            if (Mathf.Abs(arenaPitch-47) > 1 || Mathf.Abs(backgroundPitch-20) > 1 ||
-                !backgroundCamera.GetUniversalAdditionalCameraData().cameraStack.Contains(arenaCamera))
-                throw new Exception("The arena and alpine backdrop no longer have independent framing.");
+            if (arenaCamera.orthographic || (arenaCamera.cullingMask & (1 << 2)) == 0)
+                throw new Exception("The match camera must see the entire alpine landscape in perspective.");
             Directory.CreateDirectory(Results);
             File.WriteAllText(Results + "/asset-validation.txt",
                 "PASS Original flat gameplay collider retained\nPASS Decorative environment has no colliders\nPASS Sixteen safe spawns\n" +
                 "PASS FBX axes, authored face normals and vertex colors imported\nPASS Snowball stays within its visual radius tolerance\n" +
-                "PASS Independent arena and background camera stack: " + arenaPitch.ToString("F1") + " / " + backgroundPitch.ToString("F1") + " degrees\n" +
                 "Snowball triangles=" + ball.triangles.Length / 3 + "\nPlatform triangles=" + platform.triangles.Length / 3 +
                 "\nPlatform bounds=" + platform.bounds + "\n");
             CaptureSamples();
@@ -160,7 +160,7 @@ namespace SnowballArena.Editor
             material.SetFloat("_GroundTracks", tracks);
             material.SetFloat("_IsIce", glacier ? 1 : 0);
             bool mountain = name.Contains("Mountain") || name.Contains("Peak");
-            material.SetFloat("_ValleyFogStart", mountain ? 4 : -5);
+            material.SetFloat("_ValleyFogStart", mountain ? -60 : -5);
             material.SetFloat("_ValleyFogDensity", mountain ? 0.10f : 0.023f);
             material.SetFloat("_Cull", (float)CullMode.Back);
             material.SetFloat("_ZWrite", glacier ? 0 : 1);
@@ -269,12 +269,22 @@ namespace SnowballArena.Editor
             return item;
         }
 
+        private static void PlacePeak(GameObject prefab, Transform parent, Vector3 summit, Vector3 scale, float yaw)
+        {
+            var vertices = prefab.GetComponent<MeshFilter>().sharedMesh.vertices;
+            var peak = vertices[0];
+            foreach (var vertex in vertices)
+                if (vertex.y > peak.y) peak = vertex;
+            var offset = Quaternion.Euler(0,yaw,0) * Vector3.Scale(peak,scale);
+            Place(prefab,parent,summit-offset,scale,yaw);
+        }
+
         internal static void Environment(Transform root, GameObject[] cedars, GameObject[] islets, GameObject[] mountains, GameObject cliff)
         {
             var foothills = new GameObject[3];
             var foothillMaterial = Surface(EditorUtility.IsPersistent(mountains[0]) ? "ReferenceFoothill" : "StudyFoothill",0.07f);
             foothillMaterial.SetFloat("_ValleyFogStart",0);
-            foothillMaterial.SetFloat("_ValleyFogDensity",0.055f);
+            foothillMaterial.SetFloat("_ValleyFogDensity",0.027f);
             for (int i = 0; i < 3; i++)
             {
                 bool save = EditorUtility.IsPersistent(mountains[i]);
@@ -288,64 +298,65 @@ namespace SnowballArena.Editor
                     foothills[i].SetActive(false);
                 }
             }
-            for (int row = 2; row >= 0; row--)
-                for (int i = -5; i <= 5; i++)
-                {
-                    float z = 55 + row * 30 + Mathf.Sin(i * 2.3f + row) * 5;
-                    float x = i * (18 + row * 8) + Mathf.Sin(i * 1.8f) * 3;
-                    float height = 7 + row * 2.5f + (i * i + row * 3) % 3;
-                    float peakY = 10.5f - 0.09f * (z + 36) + Mathf.Sin(i * 1.9f + row * 1.7f) * 1.8f;
-                    var prefab = mountains[Mathf.Abs(i + row) % 3];
-                    float unitPeak = prefab.GetComponent<MeshFilter>().sharedMesh.bounds.max.y;
-                    Place(prefab, root, new Vector3(x, peakY - unitPeak * height, z),
-                        new Vector3(14 + row * 5, height, 12 + row * 4), i * 17 + row * 11);
-                }
+            // Silhouettes descend into a central saddle, with the clearest snow faces on the near ridge.
+            PlacePeak(mountains[0],root,new Vector3(-77.97f, -31.14f, 113.00f),new Vector3(32.00f, 18.00f, 24.64f),147);
+            PlacePeak(mountains[1],root,new Vector3(-57.44f, -29.55f, 120.00f),new Vector3(27.00f, 19.00f, 20.79f),36);
+            PlacePeak(mountains[2],root,new Vector3(-31.00f, -31.45f, 132.00f),new Vector3(35.00f, 18.00f, 26.95f),84);
+            PlacePeak(mountains[0],root,new Vector3(-3.54f, -35.16f, 140.00f),new Vector3(30.00f, 20.00f, 23.10f),16);
+            PlacePeak(mountains[1],root,new Vector3(23.33f, -29.44f, 126.00f),new Vector3(29.00f, 22.00f, 22.33f),113);
+            PlacePeak(mountains[2],root,new Vector3(55.18f, -34.89f, 138.00f),new Vector3(34.00f, 17.00f, 26.18f),44);
+            PlacePeak(mountains[0],root,new Vector3(73.72f, -26.35f, 114.00f),new Vector3(30.00f, 20.00f, 23.10f),270);
+            PlacePeak(mountains[1],root,new Vector3(-53.95f, -15.35f, 62.00f),new Vector3(20.00f, 14.00f, 15.40f),62);
+            PlacePeak(mountains[2],root,new Vector3(-35.20f, -15.66f, 71.00f),new Vector3(23.00f, 18.00f, 17.71f),135);
+            PlacePeak(mountains[0],root,new Vector3(-16.27f, -21.75f, 78.00f),new Vector3(18.00f, 12.00f, 13.86f),72);
+            PlacePeak(mountains[1],root,new Vector3(-3.71f, -22.78f, 84.00f),new Vector3(22.00f, 13.00f, 16.94f),176);
+            PlacePeak(mountains[2],root,new Vector3(10.69f, -20.50f, 74.00f),new Vector3(16.00f, 12.00f, 12.32f),85);
+            PlacePeak(mountains[0],root,new Vector3(23.79f, -11.95f, 63.00f),new Vector3(26.00f, 18.00f, 20.02f),31);
+            PlacePeak(mountains[1],root,new Vector3(50.11f, -17.01f, 70.00f),new Vector3(22.00f, 18.00f, 16.94f),140);
 
-            // Bare lower ridges continue the distant mountains down into the canyon.
-            for (int row = 2; row >= 0; row--)
-                for (int i = -4; i <= 4; i++)
-                {
-                    float height = 8 + row * 2;
-                    float peakY = -4 - row * 2.5f + Mathf.Sin(i*1.8f+row)*2;
-                    var prefab = foothills[Mathf.Abs(i+row)%3];
-                    float peak = prefab.GetComponent<MeshFilter>().sharedMesh.bounds.max.y;
-                    Place(prefab,root,new Vector3(i*(13+row*3),peakY-peak*height,27+row*12),
-                        new Vector3(12+row*3,height,11+row*2),i*29+row*17);
-                }
+            // Exposed valley walls recede behind the hanging shelves.
+            PlacePeak(foothills[0],root,new Vector3(-33.15f, -14.02f, 29.00f),new Vector3(18.00f, 14.00f, 10.26f),19);
+            PlacePeak(foothills[1],root,new Vector3(-20.97f, -21.44f, 35.00f),new Vector3(15.00f, 16.00f, 8.55f),52);
+            PlacePeak(foothills[2],root,new Vector3(-8.37f, -21.46f, 23.00f),new Vector3(12.00f, 15.00f, 6.84f),127);
+            PlacePeak(foothills[0],root,new Vector3(11.29f, -23.79f, 32.00f),new Vector3(17.00f, 18.00f, 9.69f),95);
+            PlacePeak(foothills[1],root,new Vector3(24.83f, -18.34f, 38.00f),new Vector3(20.00f, 13.00f, 11.40f),46);
+            PlacePeak(foothills[2],root,new Vector3(35.46f, -11.29f, 30.00f),new Vector3(17.00f, 15.00f, 9.69f),73);
 
-            var islandPositions = new[]
-            {
-                new Vector3(-17,-3.5f,7), new Vector3(-14,-3,18), new Vector3(-6,-4.5f,24),
-                new Vector3(14,-3,17), new Vector3(19,-4.5f,6), new Vector3(17,-4.5f,-8),
-                new Vector3(-17,-5,-8), new Vector3(-10,-8,-20), new Vector3(14,-8,-20)
-            };
-            var sizes = new[] { 3.4f, 2.2f, 1.7f, 2.8f, 3.7f, 3.4f, 4.0f, 3.8f, 4.5f };
-            for (int i = 0; i < islandPositions.Length; i++)
-            {
-                var position = islandPositions[i];
-                float size = sizes[i];
-                Place(islets[i % 3], root, position, new Vector3(size, size, size * (0.86f + (i % 3) * 0.09f)), i * 37);
-                int treeCount = i == 2 ? 1 : i % 3 == 0 ? 3 : 2;
-                for (int tree = 0; tree < treeCount; tree++)
-                {
-                    float angle = tree * 2.4f + i * 1.2f;
-                    float offset = treeCount == 1 ? 0 : size * 0.35f;
-                    float scale = (i >= 5 ? 1.1f : 0.72f) + ((i + tree) % 3) * 0.16f;
-                    Place(cedars[(i + tree) % 2], root, position + new Vector3(Mathf.Cos(angle) * offset, 0.03f, Mathf.Sin(angle) * offset),
-                        Vector3.one * scale, tree * 71 + i * 29);
-                }
-            }
-            for (int side = -1; side <= 1; side += 2)
-                for (int i = 0; i < 5; i++)
-                    Place(cliff, root, new Vector3(side * (23 + i % 2 * 4), -8 - i * 1.5f, -3 + i * 13),
-                        new Vector3(5.5f + i * 0.6f, 4 + i * 0.3f, 6.5f), side * i * 27);
+            // Each shelf has its own footprint, drop and stand of cedars.
+            Place(islets[0],root,new Vector3(-22.89f, -6.02f, 15.00f),new Vector3(5.60f, 3.20f, 2.90f),-15);
+            Place(cedars[0],root,new Vector3(-24.69f, -5.78f, 15.10f),new Vector3(0.60f, 0.60f, 0.60f),17);
+            Place(cedars[1],root,new Vector3(-21.19f, -5.78f, 15.00f),new Vector3(1.13f, 1.13f, 1.13f),80);
+            Place(cedars[0],root,new Vector3(-20.19f, -5.78f, 15.25f),new Vector3(0.48f, 0.48f, 0.48f),143);
+            Place(islets[1],root,new Vector3(-15.20f, -8.24f, 28.00f),new Vector3(2.60f, 2.70f, 1.80f),27);
+            Place(cedars[1],root,new Vector3(-15.95f, -8.03f, 28.00f),new Vector3(0.90f, 0.90f, 0.90f),46);
+            Place(cedars[0],root,new Vector3(-14.70f, -8.03f, 28.20f),new Vector3(0.54f, 0.54f, 0.54f),109);
+            Place(cedars[1],root,new Vector3(-14.08f, -8.03f, 27.90f),new Vector3(0.70f, 0.70f, 0.70f),172);
+            Place(islets[2],root,new Vector3(-14.96f, -5.81f, 9.00f),new Vector3(1.65f, 2.35f, 1.10f),-15);
+            Place(cedars[0],root,new Vector3(-15.41f, -5.63f, 9.00f),new Vector3(0.61f, 0.61f, 0.61f),75);
+            Place(cedars[1],root,new Vector3(-14.56f, -5.63f, 9.30f),new Vector3(0.39f, 0.39f, 0.39f),138);
+            Place(islets[0],root,new Vector3(9.91f, -8.52f, 32.00f),new Vector3(2.30f, 2.00f, 1.65f),15);
+            Place(cedars[1],root,new Vector3(9.51f, -8.37f, 32.00f),new Vector3(0.65f, 0.65f, 0.65f),104);
+            Place(cedars[0],root,new Vector3(10.59f, -8.37f, 32.20f),new Vector3(0.94f, 0.94f, 0.94f),167);
+            Place(islets[1],root,new Vector3(17.43f, -5.63f, 13.00f),new Vector3(3.05f, 3.65f, 2.05f),24);
+            Place(cedars[0],root,new Vector3(16.43f, -5.35f, 13.20f),new Vector3(0.68f, 0.68f, 0.68f),133);
+            Place(cedars[1],root,new Vector3(17.80f, -5.35f, 12.86f),new Vector3(1.28f, 1.28f, 1.28f),196);
+            Place(cedars[0],root,new Vector3(18.91f, -5.35f, 13.20f),new Vector3(0.61f, 0.61f, 0.61f),259);
+            Place(islets[2],root,new Vector3(21.11f, -5.55f, 4.00f),new Vector3(4.15f, 4.00f, 2.70f),37);
+            Place(cedars[1],root,new Vector3(21.51f, -5.25f, 3.85f),new Vector3(0.71f, 0.71f, 0.71f),162);
+            Place(cliff,root,new Vector3(-13.83f, -1.30f, -14.00f),new Vector3(3.65f, 4.30f, 2.50f),8);
+            Place(cedars[0],root,new Vector3(-12.45f, -0.98f, -14.00f),new Vector3(1.28f, 1.28f, 1.28f),191);
+            Place(cedars[1],root,new Vector3(-10.66f, -0.98f, -13.65f),new Vector3(0.72f, 0.72f, 0.72f),254);
+            Place(cliff,root,new Vector3(13.19f, -3.39f, -12.00f),new Vector3(4.65f, 4.65f, 2.40f),-21);
+            Place(cedars[1],root,new Vector3(11.44f, -3.04f, -11.60f),new Vector3(0.73f, 0.73f, 0.73f),220);
+            Place(cedars[0],root,new Vector3(12.79f, -3.04f, -11.75f),new Vector3(1.27f, 1.27f, 1.27f),283);
+            Place(cedars[1],root,new Vector3(14.99f, -3.04f, -11.70f),new Vector3(0.60f, 0.60f, 0.60f),346);
             for (int layer = 0; layer < 3; layer++)
             {
                 var mist = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 mist.name = "Canyon mist " + layer; mist.layer = 2;
                 Object.DestroyImmediate(mist.GetComponent<Collider>());
                 mist.transform.SetParent(root, false);
-                mist.transform.localPosition = new Vector3(0, -9 - layer * 7, 18 + layer * 13);
+                mist.transform.localPosition = new Vector3(0, -31 - layer * 7, 18 + layer * 13);
                 mist.transform.localScale = new Vector3(12, 1, 15);
                 var renderer = mist.GetComponent<MeshRenderer>();
                 var material = SpecialMaterial("ValleyMist" + layer, "SnowArena/ValleyMist");
@@ -370,7 +381,7 @@ namespace SnowballArena.Editor
                 wisp.transform.SetParent(root,false);
                 int row = i / 6;
                 float cloudZ = row < 5 ? -3 + row * 19 : row == 5 ? 38 : 1;
-                float cloudY = row < 5 ? -10 - row * 3.2f : row == 5 ? -4.5f : -15;
+                float cloudY = row < 5 ? -14 - row * 8.0f : row == 5 ? -18.5f : -13;
                 wisp.transform.localPosition = new Vector3((i % 6 - 2.5f) * 12 + Mathf.Sin(i * 2.1f) * 3,
                     cloudY + Mathf.Sin(i*2.8f)*1.4f, cloudZ + Mathf.Cos(i * 1.7f) * 6);
                 wisp.transform.localRotation = Quaternion.Euler(20,0,Mathf.Sin(i*1.7f)*9);
@@ -395,6 +406,8 @@ namespace SnowballArena.Editor
         internal static void LightingAndCamera(Transform environment)
         {
             var sky = SpecialMaterial("AlpineSky", "SnowArena/AlpineSky");
+            sky.SetColor("_Horizon",new Color(.62f,.85f,1f));
+            sky.SetColor("_Top",new Color(.36f,.73f,.99f));
             RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.62f, 0.70f, 0.80f);
@@ -406,43 +419,31 @@ namespace SnowballArena.Editor
             probe.AddDirectionalLight(Vector3.up, new Color(0.64f, 0.71f, 0.80f), 0.55f);
             RenderSettings.ambientProbe = probe;
             RenderSettings.fog = true; RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.43f, 0.65f, 0.81f);
-            RenderSettings.fogStartDistance = 60; RenderSettings.fogEndDistance = 200;
+            RenderSettings.fogColor = new Color(0.42f, 0.70f, 0.92f);
+            RenderSettings.fogStartDistance = 75; RenderSettings.fogEndDistance = 260;
             var camera = Camera.main;
-            // Both cameras use Forward rendering: URP Deferred cannot render Overlay cameras.
+            // Use the same forward-lit materials for the arena and landscape.
             var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>("Assets/Settings/PC_Renderer.asset");
             rendererData.renderingMode = RenderingMode.Forward;
             EditorUtility.SetDirty(rendererData);
-            camera.transform.position = new Vector3(0, 27, -28);
-            camera.transform.LookAt(new Vector3(0, -3, 0));
-            camera.orthographic = false; camera.fieldOfView = 32;
+            camera.transform.position = new Vector3(-0.65f, 17.65f, -46);
+            camera.transform.rotation = Quaternion.Euler(23.5f,0,0);
+            camera.orthographic = false; camera.fieldOfView = 24;
             camera.nearClipPlane = 0.15f; camera.farClipPlane = 260;
             camera.clearFlags = CameraClearFlags.Skybox; camera.allowHDR = true;
             var framing = camera.GetComponent<ArenaCamera>() ?? camera.gameObject.AddComponent<ArenaCamera>();
             framing.minimumVerticalSize = 10.5f; framing.arenaHalfWidth = 13.2f;
             var cameraData = camera.GetUniversalAdditionalCameraData();
-            camera.cullingMask = ~(1 << 2);
-            cameraData.renderType = CameraRenderType.Overlay;
+            camera.cullingMask = ~0;
+            cameraData.renderType = CameraRenderType.Base;
             cameraData.renderPostProcessing = true;
             cameraData.requiresDepthOption = CameraOverrideOption.On;
             cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
             cameraData.antialiasingQuality = AntialiasingQuality.High;
-            var backdrop = new GameObject("Alpine background camera").AddComponent<Camera>();
-            backdrop.transform.SetParent(environment,false);
-            backdrop.transform.position = new Vector3(0,10.5f,-36);
-            backdrop.transform.LookAt(new Vector3(0,-2.6f,0));
-            backdrop.fieldOfView = 30; backdrop.nearClipPlane = 0.15f; backdrop.farClipPlane = 300;
-            backdrop.cullingMask = 1 << 2; backdrop.clearFlags = CameraClearFlags.Skybox;
-            backdrop.allowHDR = true; backdrop.depth = camera.depth - 1;
-            var backgroundData = backdrop.GetUniversalAdditionalCameraData();
-            backgroundData.renderType = CameraRenderType.Base;
-            backgroundData.renderPostProcessing = false;
-            backgroundData.requiresDepthOption = CameraOverrideOption.On;
-            backgroundData.cameraStack.Add(camera);
-            framing.backgroundCamera = backdrop;
+            framing.backgroundCamera = null;
             var sun = GameObject.Find("Sun").GetComponent<Light>();
-            sun.transform.rotation = Quaternion.Euler(43, -32, 0);
-            sun.color = new Color(1, 0.99f, 0.97f); sun.intensity = 2.15f;
+            sun.transform.rotation = Quaternion.Euler(39, -41, 0);
+            sun.color = new Color(1, 0.99f, 0.97f); sun.intensity = 1.8f;
             sun.shadows = LightShadows.Soft; sun.shadowStrength = 0.70f;
             sun.shadowBias = 0.025f; sun.shadowNormalBias = 0.12f;
             RenderSettings.sun = sun;
@@ -450,14 +451,14 @@ namespace SnowballArena.Editor
             fill.transform.SetParent(environment, false);
             fill.transform.rotation = Quaternion.Euler(30, 145, 0);
             fill.type = LightType.Directional; fill.color = new Color(0.58f, 0.77f, 1);
-            fill.intensity = 0.33f; fill.shadows = LightShadows.None;
+            fill.intensity = 0.64f; fill.shadows = LightShadows.None;
 
             string path = Root + "/Art/ConceptLook.asset";
             var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
             if (profile == null) { profile = ScriptableObject.CreateInstance<VolumeProfile>(); AssetDatabase.CreateAsset(profile, path); }
             VolumeSetting<Tonemapping>(profile).mode.Override(TonemappingMode.ACES);
             var adjustments = VolumeSetting<ColorAdjustments>(profile);
-            adjustments.postExposure.Override(0.15f); adjustments.contrast.Override(3); adjustments.saturation.Override(-3);
+            adjustments.postExposure.Override(0.15f); adjustments.contrast.Override(3); adjustments.saturation.Override(8);
             VolumeSetting<WhiteBalance>(profile).temperature.Override(-2);
             var bloom = VolumeSetting<Bloom>(profile);
             bloom.intensity.Override(0.06f); bloom.threshold.Override(1.2f);

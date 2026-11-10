@@ -97,8 +97,12 @@ Shader "SnowArena/FacetedSnowLit"
                 tracks += SnowArc(p,float2(-0.8,0.3),7.65,2.8);
                 tracks += SnowArc(p,float2(-0.8,0.3),7.89,3.0)*0.7;
                 tracks += SnowArc(p,float2(0.6,0.4),8.9,4.2)*0.45;
-                albedo *= 1-saturate(tracks)*0.12;
-                float3 pressedSnow = input.positionWS - float3(0,tracks*0.028,0);
+                float2 wind = float2(p.x+p.y*0.38,p.y-p.x*0.38);
+                float ripple = Noise(float2(wind.x*.9,wind.y*4+Noise(p*.55)*3));
+                float powder = .55*ripple+.45*drift;
+                albedo *= lerp(half3(.74,.83,.98),half3(1.05,1.06,1.08),powder);
+                albedo *= 1-saturate(tracks)*0.22;
+                float3 pressedSnow = input.positionWS - float3(0,tracks*.044-powder*.038,0);
                 half3 trackNormal = normalize(cross(ddy(pressedSnow),ddx(pressedSnow)));
                 if (dot(trackNormal,normal) < 0) trackNormal = -trackNormal;
                 normal = normalize(lerp(normal,trackNormal,0.65));
@@ -116,7 +120,7 @@ Shader "SnowArena/FacetedSnowLit"
             lighting.normalWS = normal;
             lighting.viewDirectionWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
             lighting.shadowCoord = TransformWorldToShadowCoord(input.positionWS);
-            lighting.bakedGI = SampleSH(normal);
+            lighting.bakedGI = SampleSH(normal) + half3(.10,.18,.28);
             lighting.vertexLighting = VertexLighting(input.positionWS,normal);
             lighting.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
             lighting.shadowMask = half4(1,1,1,1);

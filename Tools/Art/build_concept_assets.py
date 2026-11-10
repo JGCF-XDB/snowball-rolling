@@ -22,10 +22,10 @@ RNG = random.Random(1109)
 TAU = math.tau
 SNOW = (0.91, 0.95, 1.0)
 PACKED = (0.75, 0.85, 0.95)
-ROCK = (0.20, 0.27, 0.35)
+ROCK = (0.27, 0.38, 0.51)
 ICE = (0.43, 0.79, 0.98)
 CORE = (0.21, 0.57, 0.78)
-PINE = (0.045, 0.265, 0.25)
+PINE = (0.09, 0.37, 0.34)
 BARK = (0.27, 0.235, 0.205)
 
 bpy.ops.object.select_all(action="SELECT")
@@ -217,23 +217,22 @@ def platform():
             mesh.tri(p, q, mid, "Ice", color(ICE, rng.uniform(0.9, 1.12)), radial((i + 0.5) * TAU / n))
     rock_n = 40
     rings = []
-    for ring, (r, z, spread) in enumerate(((10.65, -1.98, 0.20), (10.45, -3.45, 0.40), (9.60, -5.0, 0.50), (8.35, -6.25, 0.50))):
+    for ring, (r, z, spread) in enumerate(((10.65, -1.98, 0.20), (10.45, -3.45, 0.40), (8.95, -4.6, 0.70), (6.45, -5.45, 0.90))):
         rings.append([radial((i + (ring % 2) * 0.48) * TAU / rock_n, r + rng.uniform(-spread, spread), z + rng.uniform(-0.18, 0.18)) for i in range(rock_n)])
     for a, b in zip(rings, rings[1:]):
         connect(mesh, a, b, "Rock", ROCK, rng, 0.18)
     for i in range(rock_n):
-        mesh.tri(rings[-1][i], rings[-1][(i + 1) % rock_n], (0, 0, -6.4), "Rock", color(ROCK, 0.7), (0, 0, -1))
+        mesh.tri(rings[-1][i], rings[-1][(i + 1) % rock_n], (1.1, -0.5, -6.05), "Rock", color(ROCK, 0.7), (0, 0, -1))
     for i in range(36):
         angle = (i + rng.uniform(-0.22, 0.22)) * TAU / 36
-        center = radial(angle, 10.76 + rng.uniform(-0.12, 0.12), -0.40)
-        ico(mesh, center, (rng.uniform(0.70, 1.05), rng.uniform(0.38, 0.58), rng.uniform(0.42, 0.49)), "Snow", SNOW, 500 + i, 2,
+        center = radial(angle, 10.78 + rng.uniform(-0.16, 0.16), rng.uniform(-.36,-.16))
+        ico(mesh, center, (rng.uniform(0.70, 1.05), rng.uniform(0.44, 0.68), rng.uniform(0.44, 0.59)), "Snow", SNOW, 500 + i, 2,
             Quaternion((0, 0, 1), angle + math.pi / 2))
-    for i in range(38):
-        angle = (i + rng.uniform(-0.25, 0.25)) * TAU / 38
+    for angle in sorted(rng.sample([i * TAU / 79 for i in range(79)], 35)):
         r = 10.79
         center = radial(angle, r, -1.38)
         width = rng.uniform(0.28, 0.60)
-        length = rng.uniform(0.90, 1.65)
+        length = rng.uniform(0.38, 2.10)
         crystal(mesh, center, angle, width, length, rng)
     sculpt_snow_mantle(mesh)
     return mesh.object("ConceptPlatform")
@@ -252,29 +251,35 @@ def crystal(mesh, center, angle, width, length, rng):
 def islet(variant, cliff=False):
     rng = random.Random(130 + variant + int(cliff) * 30)
     mesh = Draft(["Snow", "Ice", "Rock", "IceCore"])
-    n = 13
-    angles = [(i + rng.uniform(-0.12, 0.12)) * TAU / n for i in range(n)]
-    radii = [rng.uniform(0.83, 1.13) for _ in range(n)]
-    top = [radial(a, r, 0) for a, r in zip(angles, radii)]
-    snow_bottom = [radial(a, r * 0.99, -0.16 + rng.uniform(-0.035, 0.025)) for a, r in zip(angles, radii)]
-    ice_bottom = [radial(a, r * 0.96, -0.34) for a, r in zip(angles, radii)]
+    # Fractures share a direction down the wall. Snow gathers on broad shoulders
+    # and thins above the broken, overhanging edges.
+    n = 22
+    angles = [(i + rng.uniform(-0.2, 0.2)) * TAU / n for i in range(n)]
+    phase = rng.uniform(0, TAU)
+    radii = [1 + .19*math.cos(3*a+phase) + .10*math.sin(5*a-phase) + rng.uniform(-.065,.065) for a in angles]
+    top = [radial(a,r,.035*math.sin(3*a+phase)) for a,r in zip(angles,radii)]
+    shoulder = [radial(a,r*.73,.06+rng.uniform(0,.06)) for a,r in zip(angles,radii)]
     for i in range(n):
-        mesh.tri((0, 0, 0), top[i], top[(i + 1) % n], "Snow", color(SNOW, rng.uniform(0.97, 1.02)), (0, 0, 1))
-    connect(mesh, top, snow_bottom, "Snow", SNOW, rng, 0.04)
-    connect(mesh, snow_bottom, ice_bottom, "Ice", ICE, rng, 0.10)
-    core_top = [Vector((p.x * 0.95, p.y * 0.95, p.z)) for p in snow_bottom]
-    core_bottom = [Vector((p.x * 0.95, p.y * 0.95, p.z)) for p in ice_bottom]
-    connect(mesh, core_top, core_bottom, "IceCore", CORE, rng, 0.10)
-    depth = 4.3 if cliff else 1.9 + variant * 0.1
-    prior = ice_bottom
-    for ring, (fraction, scale) in enumerate(((0.28, 1.0), (0.61, 0.88), (0.88, 0.67), (1.0, 0.32 if not cliff else 0.56))):
-        current = [radial(a + (0.12 if ring % 2 else -0.08), r * scale * rng.uniform(0.9, 1.1), -depth * fraction + rng.uniform(-0.12, 0.12)) for a, r in zip(angles, radii)]
-        connect(mesh, prior, current, "Rock", ROCK, rng, 0.20)
-        prior = current
+        j = (i+1) % n
+        mesh.tri((0,0,.13), shoulder[i], shoulder[j], "Snow", color(SNOW,rng.uniform(.96,1.04)), (0,0,1))
+        mesh.quad(shoulder[i], top[i], top[j], shoulder[j], "Snow", color(SNOW,rng.uniform(.93,1.03)), (0,0,1))
+    lip = [radial(a,r*1.025,-rng.uniform(.07,.15)) for a,r in zip(angles,radii)]
+    ledge = [radial(a,r*.98,-rng.uniform(.14,.24)) for a,r in zip(angles,radii)]
+    connect(mesh,top,lip,"Snow",SNOW,rng,.045)
+    connect(mesh,lip,ledge,"IceCore",(.58,.75,.86),rng,.08)
+    prior = ledge
+    depth = 3.2 if cliff else 1.6 + .14*variant
+    stone = (.37,.50,.61)
+    for level, width in ((.26,1.02),(.58,.87),(.79,.57),(1,.16)):
+        offset = Vector((.28*level,-.16*level,0))
+        ring = [radial(a+.03*level,r*width*rng.uniform(.92,1.08),
+                       -depth*level*(1+.13*math.sin(3*a+phase))+rng.uniform(-.06,.06))+offset for a,r in zip(angles,radii)]
+        connect(mesh,prior,ring,"Rock",stone,rng,.15)
+        prior = ring
     for i in range(n):
-        mesh.tri(prior[i], prior[(i + 1) % n], (0, 0, -depth), "Rock", color(ROCK, 0.8), (0, 0, -1))
-    for i in range(n):
-        ico(mesh, radial(angles[i], radii[i] * 0.88, -0.065), (0.20, 0.18, 0.09), "Snow", SNOW, 1200 + i + variant * 20, 1)
+        mesh.tri(prior[i],prior[(i+1)%n],(.3,-.15,-depth*1.15),"Rock",color(stone,.84),(0,0,-1))
+    for i in (1,6,15):
+        crystal(mesh,ledge[i],angles[i],.055,rng.uniform(.10,.22),rng)
     return mesh.object("ConceptCliff" if cliff else "ConceptIslet" + str(variant))
 
 
@@ -380,12 +385,12 @@ def mountain(variant):
         if max(v.z for v in p) < 0.035:
             continue
         center = sum(p, Vector()) / 3
-        mesh.face(p, "Rock", color((0.08, 0.28, 0.36), rng.uniform(0.86, 1.15)), (0, 0, 1))
+        mesh.face(p, "Rock", color((0.14, 0.43, 0.53), rng.uniform(0.86, 1.15)), (0, 0, 1))
         for i in range(3):
             a, b = face[i], face[(i + 1) % 3]
             key = tuple(sorted((a, b)))
             rock_edges.setdefault(key, []).append((a, b))
-        snowline = 0.68 + 0.065 * math.sin(center.x * 9 + center.y * 6 + variant)
+        snowline = 0.77 + 0.13 * math.sin(center.x * 10 + center.y * 7 + variant) + 0.09*math.cos(center.y*14-center.x*3)
         if center.z > snowline:
             top = [points[i] + Vector((0, 0, snow_height[i])) for i in face]
             mesh.face(top, "Snow", color(SNOW, rng.uniform(0.96, 1.04)), (0, 0, 1))
@@ -406,8 +411,8 @@ def mountain(variant):
         a, b = edges[0]
         pa, pb = points[a], points[b]
         qa, qb = Vector((pa.x, pa.y, 0)), Vector((pb.x, pb.y, 0))
-        mesh.quad(pa, pb, qb, qa, "Rock", color((0.08, 0.28, 0.36), 0.88), Vector((pa.x + pb.x, pa.y + pb.y, 0)))
-        mesh.tri(qa, qb, (0, 0, 0), "Rock", color((0.08, 0.28, 0.36), 0.8), (0, 0, -1))
+        mesh.quad(pa, pb, qb, qa, "Rock", color((0.14, 0.43, 0.53), 0.88), Vector((pa.x + pb.x, pa.y + pb.y, 0)))
+        mesh.tri(qa, qb, (0, 0, 0), "Rock", color((0.14, 0.43, 0.53), 0.8), (0, 0, -1))
     return mesh.object("ConceptMountain" + str(variant))
 
 

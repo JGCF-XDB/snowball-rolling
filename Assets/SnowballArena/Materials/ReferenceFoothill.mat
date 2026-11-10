@@ -34,7 +34,7 @@ Material:
     - _Smoothness: 0.07
     - _SnowDetail: 0
     - _SrcBlend: 1
-    - _ValleyFogDensity: 0.055
+    - _ValleyFogDensity: 0.027
     - _ValleyFogStart: 0
     - _ZWrite: 1
     m_Colors:
