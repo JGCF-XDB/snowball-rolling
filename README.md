@@ -74,7 +74,7 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 
 ## 音效与碰撞反馈
 
-全部音频在 `Assets/SnowballArena/Audio`，逐文件许可说明见同目录 `LICENSE.txt`。除滚动循环外均为 **Kenney CC0** 素材，可商用、无需署名。
+全部音频在 `Assets/SnowballArena/Audio`，逐文件许可说明见同目录 `LICENSE.txt`。除下列特殊项外均为 **Kenney / OpenGameArt CC0** 素材，可商用、无需署名：`Cannon/cannon_explosion.wav` 为 **CC-BY 3.0**，必须保留 “2 High Quality Explosions by Michel Baradari” 的署名；`Cannon/cannon_flight.wav`、`Cannon/cannon_warning.wav`、`Roll/roll_snow_loop.wav`、`Reward/knockdown.wav` 为本项目生成。
 
 | 用途 | 文件 | 来源 |
 | --- | --- | --- |
@@ -85,6 +85,12 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 | 开始与倒计时 | `Interface/confirmation_001`、`tick_001` | Kenney Interface Sounds, CC0 |
 | 胜利与失败 | `Jingle/jingle_victory`（音高上行）、`jingle_defeat`（下行） | Kenney Music Jingles, CC0 |
 | 菜单 / 对局背景音乐 | `Music/menu_theme.ogg`（25 s 循环）、`Music/match_theme.ogg`（16.6 s 循环） | OpenGameArt, CC0 |
+| 炮台部署 | `Cannon/cannon_deploy.ogg` | Kenney Impact Sounds（impactMetal_heavy）, CC0 |
+| 发射前预警 | `Cannon/cannon_warning.wav`（0.2 s，880 Hz，每次闪烁升高音高） | 本项目生成 |
+| 炮击 | `Cannon/cannon_fire.wav`（1.20 s，真实加农炮录音） | OpenGameArt「Cannon fire」by Thimras, CC0 |
+| 炮弹飞行 | `Cannon/cannon_flight.wav`（0.62 s，重石弹低频掠过） | 本项目生成 |
+| 炮弹命中爆炸 | `Cannon/cannon_explosion.wav`（1.55 s，低频轰 + 尾音） | OpenGameArt「2 High Quality Explosions」by Michel Baradari, **CC-BY 3.0（需署名）** |
+| 玩家击落奖励 | `Reward/knockdown.wav`（A5→E6 上行双音） | 本项目生成 |
 
 运行时结构（均为自动挂载，不需要改场景或预制体）：
 
@@ -106,7 +112,29 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 
 滚动音的音高按球半径开方反比降低，所以大球滚动更低沉。
 
-开发版音频自检：`--audio-check <输出目录>` 会写出音频子系统状态（`outputSampleRate`、驱动能力）、AudioListener 数量与所在对象、每个 clip 的时长，以及播放后 `AudioSource.time` 是否推进，用来区分“设备没出声”与“代码没调用”。实测参考值：采样率 48000、listener 在 Main Camera、撞击音 `time` 会从 0 递增。另外 `ArenaFeedback` 在启动时设 `Application.runInBackground = true`，避免窗口失焦时 Unity 自动暂停音频。背景音乐由 `ArenaFeedback.UpdateMusic` 按对局阶段切换：菜单播 `menu_theme`，倒计时与对局播 `match_theme`，结算阶段静音以突出胜负 jingle；音量 `musicVolume`（默认 0.32）与音效音量互不干扰。两条音乐的 RMS 响度接近（菜单 ~13 dB、对局 ~14 dB），切换时不会出现“突然听不见”。滚动循环音默认 `rollVolume` 0.35、`maxDistance` 38，避免多球同时滚动时盖过碰撞声。
+### 炮台音效
+
+四类音效直接挂在 `CannonDirector` 已有的 `CannonStage` 状态上，不新增状态机：
+
+| 时机 | 触发点 | 声音 |
+| --- | --- | --- |
+| 部署 / 换位 | `SpawnCannon` 成功 | 金属卡合声，表示新的死亡线已经出现 |
+| 发射前预警 | `Warning` 阶段第 2、3 次闪烁（`FlashCount` 变化时） | 滴声，每闪一次音高 +0.14，最后一闪最尖 |
+| 发射 | `Fire` | 低顿炮响 + 呼啸，呼啸只盖发射瞬间 |
+| 命中 | `Advance` 中炮弹命中分支 | 爆炸声，位置取命中前的 `ShotPosition` |
+
+部署音承担了第一次闪烁的听感，所以三闪加起来只听得到两次滴声，与视觉的第 2、3 次亮灭对齐。全部炮台音为 3D 定位，可以分辨炮弹从哪一侧飞来。
+
+### 击落归属
+
+“是不是玩家撞下去的”由两次处理共同决定：
+
+1. `SnowballImpact` 在每次雪球互撞时，用**本物理步开始时的速度**在接触法线（由对方指向自己）上做投影，只有沿该轴真正在逼近的一方被记作攻击者，写入被撞方的 `SnowballBody.LastKnockedBy` / `LastKnockTime`。因此擦身而过、已经自由落体的球、以及双球同速接触都不会被误判为攻击者；而慢速持续推挤（最常见的击杀方式）照样算数。
+2. `MatchController.Eliminate` 只在 `Fall` 淘汰时检查：最后一次推撞是否在 `knockdownCreditSeconds`（默认 3.5 s）以内，且攻击者是否为仍存活的玩家。命中即播 2D 奖励音（不受距离衰减），并显示“撞落 X”提示。
+
+炮弹击杀、机器人之间的互相推落、以及超过时间窗的旧推撞都不会触发奖励音，所以这个音永远意味着“这一下是我干的”。时间窗用 `Time.fixedTime`，与淘汰判定同在物理步内。
+
+开发版音频自检：`--audio-check <输出目录>` 会写出音频子系统状态（`outputSampleRate`、驱动能力）、AudioListener 数量与所在对象、每个 clip 的时长，以及播放后 `AudioSource.time` 是否推进，用来区分“设备没出声”与“代码没调用”。实测参考值：采样率 48000、listener 在 Main Camera、撞击音 `time` 会从 0 递增。另外 `ArenaFeedback` 在启动时设 `Application.runInBackground = true`，避免窗口失焦时 Unity 自动暂停音频。背景音乐由 `ArenaFeedback.UpdateMusic` 按对局阶段切换：菜单播 `menu_theme`，倒计时与对局播 `match_theme`，结算阶段静音以突出胜负 jingle；音量 `musicVolume`（默认 0.15）与音效音量互不干扰。两条音乐的 RMS 响度接近（菜单 ~13 dB、对局 ~14 dB），切换时不会出现“突然听不见”。滚动循环音默认 `rollVolume` 0.35、`maxDistance` 38，避免多球同时滚动时盖过碰撞声。
 
 ## 平台扩展
 

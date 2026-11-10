@@ -27,7 +27,7 @@ namespace SnowballArena
         [Min(0f)] public float hitstopMaxSeconds = 0.035f;
 
         [Header("Music")]
-        [Range(0f, 1f)] public float musicVolume = 0.32f;
+        [Range(0f, 1f)] public float musicVolume = 0.15f;
 
         private AudioLibrary library;
         private AudioSource[] voices;
@@ -113,6 +113,28 @@ namespace SnowballArena
             AudioClip clip = library == null ? null : victory ? library.victory : library.defeat;
             Play(clip, Vector3.zero, 0.95f * masterVolume, 1f, false);
         }
+
+        // Cannon cues are 3D so the player can hear which side of the platform a shot comes from.
+        public void CannonDeploy(Vector3 at) =>
+            Play(library == null ? null : library.cannonDeploy, at, masterVolume, Random.Range(0.94f, 1.06f), true);
+
+        // Raising the pitch per flash turns the two audible blips into a countdown.
+        public void CannonWarning(Vector3 at, int flash) =>
+            Play(library == null ? null : library.cannonWarning, at,
+                Mathf.Lerp(0.85f, 1f, Mathf.Clamp01(flash / 3f)) * masterVolume, 1f + 0.12f * flash, true);
+
+        public void CannonFire(Vector3 at) =>
+            Play(library == null ? null : library.cannonFire, at, masterVolume, Random.Range(0.92f, 1f), true);
+
+        public void CannonFlight(Vector3 at) =>
+            Play(library == null ? null : library.cannonFlight, at, 0.8f * masterVolume, Random.Range(0.95f, 1.08f), true);
+
+        public void CannonExplosion(Vector3 at) =>
+            Play(library == null ? null : library.cannonExplosion, at, masterVolume, Random.Range(0.9f, 1.05f), true);
+
+        /// <summary>Player knocked a rival off the platform. Played flat (2D) so it reads as a reward.</summary>
+        public void Knockdown() =>
+            Play(library == null ? null : library.knockdown, Vector3.zero, 0.9f * masterVolume, 1f, false);
 
         public void Hitstop(float seconds)
         {
