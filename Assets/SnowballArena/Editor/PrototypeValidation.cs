@@ -20,7 +20,7 @@ namespace SnowballArena.Editor
             public Scene Scene;
             public SnowballBody Ball;
             public SnowballMotor Motor;
-            public Fixture(bool square = false)
+            public Fixture(bool square = false, float platformSize = 22f)
             {
                 Scene = EditorSceneManager.NewPreviewScene();
                 Require(Scene.GetPhysicsScene() != Physics.defaultPhysicsScene, "Validation must use an isolated physics scene");
@@ -29,7 +29,7 @@ namespace SnowballArena.Editor
                 if (square)
                 {
                     var box = platform.AddComponent<BoxCollider>();
-                    box.size = new Vector3(22, 2, 22); box.center = Vector3.down;
+                    box.size = new Vector3(platformSize, 2, platformSize); box.center = Vector3.down;
                     box.sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(PrototypeBuilder.Root + "/Materials/SnowContact.physicMaterial");
                 }
                 else
@@ -81,13 +81,15 @@ namespace SnowballArena.Editor
             });
             Check("Applied force accelerates and physically rolls sphere", () =>
             {
-                using var f = new Fixture(); f.Step(30, Vector3.zero); f.Step(60, Vector3.right);
+                using var f = new Fixture(true, 200); f.Step(30, Vector3.zero); f.Step(60, Vector3.right);
                 Require(f.Ball.RigidBody.position.x > 0.5f, "Drive did not move sphere");
                 Require(f.Ball.RigidBody.angularVelocity.magnitude > 0.1f, "Sphere slid without rolling");
             });
             Check("Release retains inertia then dissipates motion", () =>
             {
-                using var f = new Fixture(); f.Step(30, Vector3.zero); f.Step(60, Vector3.right);
+                // High-speed runs need room to remain grounded during the coast-down.
+                // Gameplay edge behavior is validated separately on the original arena.
+                using var f = new Fixture(true, 200); f.Step(30, Vector3.zero); f.Step(60, Vector3.right);
                 float speed = f.Ball.RigidBody.linearVelocity.x;
                 f.Step(1, Vector3.zero);
                 Require(f.Ball.RigidBody.linearVelocity.x > speed * 0.8f, "Release instantly killed momentum");
@@ -96,7 +98,7 @@ namespace SnowballArena.Editor
             });
             Check("Reverse input brakes before reversing", () =>
             {
-                using var f = new Fixture(); f.Step(30, Vector3.zero); f.Step(60, Vector3.right);
+                using var f = new Fixture(true, 200); f.Step(30, Vector3.zero); f.Step(60, Vector3.right);
                 float initial = f.Ball.RigidBody.linearVelocity.x;
                 f.Step(1, Vector3.left);
                 Require(f.Ball.RigidBody.linearVelocity.x > 0 && f.Ball.RigidBody.linearVelocity.x < initial, "Velocity snapped on reverse");
