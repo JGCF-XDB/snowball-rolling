@@ -13,7 +13,7 @@ namespace SnowballArena.Editor
         public static void TuneAndBuild()
         {
             var contact = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(PrototypeBuilder.Root + "/Materials/SnowContact.physicMaterial");
-            contact.bounciness = 0.65f;
+            ElasticCollisionBuilder.ConfigureMaterials();
             EditorUtility.SetDirty(contact); AssetDatabase.SaveAssets();
             PrototypeValidation.Run();
             GrowthCollisionValidation.Run();

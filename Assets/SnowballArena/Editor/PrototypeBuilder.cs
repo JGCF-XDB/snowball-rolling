@@ -38,12 +38,9 @@ namespace SnowballArena.Editor
             var rock = MakeMaterial("Rock", new Color(0.085f, 0.20f, 0.29f));
             var ballWhite = MakeMaterial("Snowball", new Color(0.97f, 0.99f, 1f));
             var ballBlue = MakeMaterial("SnowballIce", new Color(0.34f, 0.76f, 0.85f));
-            var surfacePhysics = new PhysicsMaterial("Snow Contact")
-            {
-                dynamicFriction = 0.45f, staticFriction = 0.5f, bounciness = 0.65f,
-                frictionCombine = PhysicsMaterialCombine.Average, bounceCombine = PhysicsMaterialCombine.Average
-            };
-            AssetDatabase.CreateAsset(surfacePhysics, Root + "/Materials/SnowContact.physicMaterial");
+            ElasticCollisionBuilder.ConfigureMaterials();
+            var surfacePhysics = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.BallMaterialPath);
+            var groundPhysics = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.GroundMaterialPath);
             var settings = ScriptableObject.CreateInstance<SnowballSettings>();
             AssetDatabase.CreateAsset(settings, Root + "/Configs/DefaultSnowball.asset");
             var arena = ScriptableObject.CreateInstance<ArenaDefinition>();
@@ -57,7 +54,7 @@ namespace SnowballArena.Editor
             platform.AddComponent<MeshRenderer>().sharedMaterials = new[] { snow, ice, rock };
             var collider = platform.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
-            collider.sharedMaterial = surfacePhysics;
+            collider.sharedMaterial = groundPhysics;
             platform.AddComponent<ArenaSurface>().definition = arena;
             PrefabUtility.SaveAsPrefabAsset(platform, Root + "/Prefabs/CircularArena.prefab");
 

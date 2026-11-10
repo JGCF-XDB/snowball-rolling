@@ -30,13 +30,13 @@ namespace SnowballArena.Editor
                 {
                     var box = platform.AddComponent<BoxCollider>();
                     box.size = new Vector3(22, 2, 22); box.center = Vector3.down;
-                    box.sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(PrototypeBuilder.Root + "/Materials/SnowContact.physicMaterial");
+                    box.sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.GroundMaterialPath);
                 }
                 else
                 {
                     var mesh = platform.AddComponent<MeshCollider>();
                     mesh.sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(PrototypeBuilder.Root + "/Art/CircularPlatform.asset");
-                    mesh.sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(PrototypeBuilder.Root + "/Materials/SnowContact.physicMaterial");
+                    mesh.sharedMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(ElasticCollisionBuilder.GroundMaterialPath);
                 }
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeBuilder.PrefabPath);
                 var player = UnityEngine.Object.Instantiate(prefab);
