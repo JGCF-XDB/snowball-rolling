@@ -1,0 +1,68 @@
+passed=True
+PASS Countdown does not advance cannon clock
+PASS No cannon before 20 seconds
+PASS Cannon spawns at 20 seconds with first flash
+PASS Warning follows the real full diameter through the center
+PASS Player build includes the supported infrared core-and-halo shader
+PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
+PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
+PASS First flash turns off without firing
+PASS Second flash turns on
+PASS Second flash turns off without firing
+PASS Third flash turns on
+PASS Third flash turns off before firing
+PASS Exactly one projectile fires after all three flashes
+PASS First physical hit wins even when a farther target appears earlier in the list
+PASS A projectile crossing several targets in one step kills only the first
+PASS Impact removes projectile and starts warning at a different cannon position
+PASS Missed projectile remains alive during its flight
+PASS Cannon, projectile and trail render through the gameplay camera, never the distant backdrop
+PASS Flying cannonball projects inside the gameplay viewport
+PASS Short flight trail ends at the projectile and stays behind it on the actual lane
+PASS Hazard visuals introduce no physical obstacles or extra collision hits
+PASS Flying cannonball uses the selected Blender-authored ice-core mesh
+PASS Modeled muzzle stays at the firing origin and its inner diameter equals the projectile diameter
+PASS Missed projectile disappears only at opposite edge and cannon relocates
+PASS Hit player is eliminated and spectates remaining bots
+PASS Relative sweep detects a fast snowball crossing the projectile between steps
+PASS Last survivor wins and all cannon visuals are removed
+PASS Results stop the cannon cycle
+PASS Restart clears the clock and old projectile
+PASS Restart waits a fresh 20 seconds
+PASS Practice mode also ends immediately on cannon hit
+PASS Return to menu removes warning and resets hazards
+PASS Modeled runes turn off with the warning line
+PASS Modeled runes turn on with the warning line
+PASS Selected cannon fires from the fitted muzzle with a brief flash
+PASS Barrel recoils while the flash is visible without moving the logical firing lane
+PASS Impact removes one target and emits one decorative ice-and-ember burst
+PASS Decorative impact fragments expire after their short lifetime
+PASS Menu removes selected models, muzzle flashes and decorative effects
+PASS Only one cannon before 40 seconds
+PASS At 40 seconds second cannon joins with its own full warning
+PASS Two cannons use different non-overlapping diameters
+PASS Only two cannons before 60 seconds
+60-second boundary: elapsed=60, active=3, warnings=2, thirdFlash=1
+PASS At 60 seconds third cannon joins with its own full warning
+PASS Player build includes the supported infrared core-and-halo shader
+PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
+PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
+PASS Player build includes the supported infrared core-and-halo shader
+PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
+PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
+PASS Player build includes the supported infrared core-and-halo shader
+PASS Entire infrared ribbon stays just above supported snow instead of standing across the cannon
+PASS Warning geometry begins in front of the muzzle and ends inside the opposite platform rim
+PASS Three cannons use different non-overlapping diameters
+PASS Long-running repeated cycles retain exactly three cannons after 60 seconds
+PASS Repeated independent relocations maintain angle separation
+PASS Menu clears all three cannons, projectiles and escalation clock
+PASS Restart resets escalated difficulty to one cannon at 20 seconds
+PASS Each newly spawned cannon starts warning without an immediate shot
+PASS Three independent cannons each complete three flashes and fire one projectile
+PASS Concurrent projectiles each eliminate their first target only
+PASS Hit cannons relocate independently while an unaffected projectile keeps flying
+PASS Post-impact relocations still avoid both other cannon diameters
+PASS Victory clears all simultaneous warnings and projectiles
+PASS Finished match cannot escalate or fire further shots
+error=

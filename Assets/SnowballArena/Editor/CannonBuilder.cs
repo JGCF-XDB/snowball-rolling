@@ -18,6 +18,13 @@ namespace SnowballArena.Editor
                 material.SetColor("_BaseColor", new Color(1, 0.055f, 0.025f));
                 AssetDatabase.CreateAsset(material, path);
             }
+            const string warningPath = folder + "/CannonWarning.mat";
+            if (AssetDatabase.LoadAssetAtPath<Material>(warningPath) == null)
+            {
+                var shader = Shader.Find("SnowArena/CannonWarning");
+                if (shader == null) throw new System.InvalidOperationException("Cannon warning shader is missing.");
+                AssetDatabase.CreateAsset(new Material(shader) { name = "CannonWarning" }, warningPath);
+            }
             AssetDatabase.SaveAssets();
             MatchSceneBuilder.BuildGame();
         }

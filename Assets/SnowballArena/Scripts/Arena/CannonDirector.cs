@@ -195,11 +195,7 @@ namespace SnowballArena
             cannon.transform.rotation = Quaternion.LookRotation(direction);
             cannon.transform.position = start - cannon.transform.TransformVector(c.visuals.muzzle.localPosition);
             c.visuals.SetWarning(true);
-            c.warning = new GameObject("Three-flash diameter warning").AddComponent<LineRenderer>();
-            c.warning.transform.SetParent(c.root.transform); c.warning.sharedMaterial = warningMaterial;
-            c.warning.useWorldSpace = true; c.warning.positionCount = 2; c.warning.widthMultiplier = projectileRadius * 2;
-            c.warning.SetPosition(0, start - Vector3.up * 0.75f); c.warning.SetPosition(1, end - Vector3.up * 0.75f);
-            c.warning.enabled = true;
+            c.warning = CannonWarningVisual.Create(c.root.transform, match.surface, start, end, warningMaterial);
             if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.CannonDeploy(start);
             return true;
         }
@@ -290,8 +286,9 @@ namespace SnowballArena
             if (warningMaterial != null) return;
             art = Resources.Load<CannonArt>("CannonArt");
             if (art == null) throw new System.InvalidOperationException("Selected cannon assets are missing. Run Rebuild Selected Cannon B.");
-            warningMaterial = new Material(Resources.Load<Material>("CannonSignal")) { name = "Cannon warning" };
-            warningMaterial.SetColor("_BaseColor", new Color(1f, 0.055f, 0.025f));
+            // A Resources material retains the dedicated laser shader in player builds.
+            warningMaterial = Resources.Load<Material>("CannonWarning");
+            if (warningMaterial == null) throw new System.InvalidOperationException("Cannon warning material is missing. Run Build Cannon Game.");
         }
         private static void ClearVisuals(CannonState c)
         {
@@ -302,7 +299,6 @@ namespace SnowballArena
         private void OnDestroy()
         {
             Stop();
-            if (warningMaterial != null) Destroy(warningMaterial);
         }
     }
 }

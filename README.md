@@ -194,7 +194,7 @@ elastic-collision 曾将雪球间恢复系数从 0.65 调至 0.95，平台接触
 
 ## 20 / 40 / 60 秒递增炮击（cannon 分支）
 
-只计算正式开局后的游戏时间，倒计时不计入。对局持续到 20 秒时，平台边缘出现一台炮台，红色直径线亮灭三次（每次亮 0.5 秒、灭 0.5 秒，共 3 秒），随后沿圆心方向发射一枚橙色炮弹。炮弹以 18 m/s、半径 0.3 m 沿直径飞行，只淘汰第一个命中的玩家或机器人，随后炮弹立即消失；不进行普通碰撞击退。
+只计算正式开局后的游戏时间，倒计时不计入。对局持续到 20 秒时，平台边缘出现一台炮台，贴在雪面上的红外警示线亮灭三次（每次亮 0.5 秒、灭 0.5 秒，共 3 秒），随后沿圆心方向发射一枚橙色炮弹。炮弹以 18 m/s、半径 0.3 m 沿直径飞行，只淘汰第一个命中的玩家或机器人，随后炮弹立即消失；不进行普通碰撞击退。
 
 炮弹命中一个雪球或未命中而到达对岸后，与旧炮台一同清理，下一台出现在不同位置并重新预警三次，循环至比赛结束。同一炮台换位至少转过 65 度。正式对局到 40 秒时增加第二台炮台，到 60 秒时增加第三台，此后保持最多三台。升级时保留已有炮台和正在飞行的炮弹；新增炮台完整预警三次，各台独立发射、命中清理和换位。同时存在的炮台射击直径至少错开 25 度，避免同向或正对面的重叠火线。炮弹命中沿用存活者获胜规则；玩家死亡后观战。重开和返回菜单会清除所有炮台、炮弹及计时。0 机器人练习模式也有炮击，可用它观察 20 秒机制。
 
@@ -202,6 +202,8 @@ CannonDirector 管理等待、预警、飞行状态，MatchController 在每个�
 
 炮台、炮弹和预警线共用比赛相机的 layer 0，避免被只负责远山的 layer 2 相机错误取景。正式对局采用 Blender 制作的暗色 B 冰晶长管炮和冰壳核心弹，保留三层六角底座和冰晶支撑，炮管约 3.21 m 长，圆口为 48 段细分与倒角，炮口内径和炮弹外径均为 0.60 m。符文随预警线闪烁；发射时出现柔边圆形辉光和炮管后坐；炮弹具有圆弧端面，飞行时显示旋转与最长约 2.16 m 的橙色短拖尾；命中后有 0.30 s 的冰晶余烬消散。动效没有额外碰撞或范围伤害，并随结算、重开和返回菜单清理。资源、源文件、实机预览与重建说明见 [暗色 B 大炮与炮弹](docs/art/selected-cannon-b/README.md)。
 
-参数位于 Scripts/Arena/CannonDirector.cs：startAfterSeconds、escalationInterval、flashHalfPeriod、projectileSpeed、projectileRadius。场景中的 MatchController 启动时自动挂载该组件。菜单 Snowball Arena > Build Cannon Game 可准备预警材质并打包；已有 Resources/CannonSignal.mat 后，普通 Windows 打包入口同样可用。
+红外警示线使用约 0.034 m 红色细芯和 0.18 m 总宽的淡柔光，固定平铺在雪面上方 0.035 m，两端各从平台边界内收 0.18 m，不延伸到炮台下方。正常深度检测使雪球、炮身保持正确遮挡。视觉参数集中在 Scripts/Presentation/CannonWarningVisual.cs，效果与前后对比见 [红外警示线](docs/art/cannon-infrared-warning/README.md)。
+
+参数位于 Scripts/Arena/CannonDirector.cs：startAfterSeconds、escalationInterval、flashHalfPeriod、projectileSpeed、projectileRadius。场景中的 MatchController 启动时自动挂载该组件。菜单 Snowball Arena > Build Cannon Game 可准备预警材质并打包；Resources/CannonSignal.mat 和 Resources/CannonWarning.mat 随项目保存，普通 Windows 打包入口同样可用。
 
 开发包支持 --cannon-smoke <输出目录>，包含炮台专项计时、三次预警、最近命中与单发单目标、高速相交、40/60 秒升级、多炮同时发射与独立命中、持续换位、胜负及清理检查，并输出预警和飞行画面（相机图不含 OnGUI）。其他对局验证把炮弹淘汰与自行落台分开统计。
