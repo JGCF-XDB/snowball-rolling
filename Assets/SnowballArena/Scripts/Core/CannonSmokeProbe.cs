@@ -36,16 +36,16 @@ namespace SnowballArena
             cannon.Advance(70);
             Check(cannon.Elapsed == 0 && !cannon.HasVisuals, "Countdown does not advance cannon clock");
             match.BeginRunning(); Freeze();
-            cannon.Advance(59.98f);
-            Check(!cannon.HasVisuals && cannon.ShotsFired == 0, "No cannon before 60 seconds");
+            cannon.Advance(19.98f);
+            Check(!cannon.HasVisuals && cannon.ShotsFired == 0, "No cannon before 20 seconds");
             cannon.Advance(0.02f);
-            Check(cannon.Stage == CannonStage.Warning && cannon.WarningVisible && cannon.FlashCount == 1, "Cannon spawns at 60 seconds with first flash");
+            Check(cannon.Stage == CannonStage.Warning && cannon.WarningVisible && cannon.FlashCount == 1, "Cannon spawns at 20 seconds with first flash");
             var direction = (cannon.LaneEnd - cannon.LaneStart).normalized;
             var center = (cannon.LaneStart + cannon.LaneEnd) * 0.5f;
             var side = Vector3.Cross(Vector3.up, direction);
             Check(Vector3.Distance(new Vector3(center.x, 0, center.z), match.surface.AimPoint) < 0.1f
                 && Vector3.Distance(cannon.LaneStart, cannon.LaneEnd) > 21.5f, "Warning follows the real full diameter through the center");
-            Place(0, center); Place(1, cannon.LaneStart + direction * 0.2f); Place(2, center + side * 4); Place(3, center - side * 4);
+            Place(0, center); Place(1, cannon.LaneStart + direction * 4f); Place(2, center + side * 4); Place(3, center - side * 4);
             cannon.Advance(0.001f); Capture("cannon-warning.png");
             cannon.Advance(0.499f);
             Check(!cannon.WarningVisible && cannon.ShotsFired == 0, "First flash turns off without firing");
@@ -60,17 +60,35 @@ namespace SnowballArena
             cannon.Advance(0.5f);
             Check(cannon.Stage == CannonStage.Flying && cannon.ShotsFired == 1 && cannon.FlashCount == 3, "Exactly one projectile fires after all three flashes");
             var oldStart = cannon.LaneStart;
-            cannon.Advance(0.04f); match.ResolveEliminations();
-            Check(!match.Participants[1].alive && match.Participants[1].eliminationCause == EliminationCause.Cannon, "Projectile instantly eliminates a hit bot");
-            cannon.Advance(0.2f); Capture("cannon-projectile.png");
-            cannon.Advance(0.45f); match.ResolveEliminations();
-            Check(!match.Participants[0].alive && match.Notice == "你被炮弹击中" && match.Phase == MatchPhase.Running, "Hit player is eliminated and spectates remaining bots");
-            Check(match.Participants[2].alive && match.Participants[3].alive, "Snowballs outside the shot lane survive");
-            cannon.Advance(0.8f);
-            Check(cannon.CycleCount == 2 && cannon.Stage == CannonStage.Warning && cannon.ShotsFired == 1
-                && Vector3.Distance(oldStart, cannon.LaneStart) > 5, "Shot exits at the opposite edge and cannon respawns elsewhere");
+            cannon.Advance(0.8f); match.ResolveEliminations();
+            Check(!match.Participants[1].alive && match.Participants[1].eliminationCause == EliminationCause.Cannon,
+                "First physical hit wins even when a farther target appears earlier in the list");
+            Check(match.Participants[0].alive && match.Participants[2].alive && match.Participants[3].alive,
+                "A projectile crossing several targets in one step kills only the first");
+            Check(!cannon.HasProjectile && cannon.CycleCount == 2 && cannon.Stage == CannonStage.Warning && cannon.ShotsFired == 1
+                && Vector3.Distance(oldStart, cannon.LaneStart) > 5, "Impact removes projectile and starts warning at a different cannon position");
 
-            Setup(1); cannon.Advance(60);
+            // A complete miss must still travel to the far boundary before respawning.
+            Setup(3); cannon.Advance(20);
+            direction = (cannon.LaneEnd - cannon.LaneStart).normalized;
+            side = Vector3.Cross(Vector3.up, direction);
+            center = (cannon.LaneStart + cannon.LaneEnd) * 0.5f;
+            for (int i = 0; i < 4; i++) Place(i, center + side * (i < 2 ? 4 : -4) + direction * (i % 2 == 0 ? 2 : -2));
+            cannon.Advance(3); cannon.Advance(0.2f); Capture("cannon-projectile.png");
+            Check(cannon.HasProjectile && cannon.CycleCount == 1, "Missed projectile remains alive during its flight");
+            cannon.Advance(Vector3.Distance(cannon.LaneStart, cannon.LaneEnd) / cannon.projectileSpeed - 0.2f);
+            Check(!cannon.HasProjectile && cannon.CycleCount == 2 && cannon.Stage == CannonStage.Warning,
+                "Missed projectile disappears only at opposite edge and cannon relocates");
+
+            Setup(2); cannon.Advance(20);
+            center = (cannon.LaneStart + cannon.LaneEnd) * 0.5f;
+            side = Vector3.Cross(Vector3.up, (cannon.LaneEnd - cannon.LaneStart).normalized);
+            Place(0, center); Place(1, center + side * 4); Place(2, center - side * 4);
+            cannon.Advance(3); cannon.Advance(0.8f); match.ResolveEliminations();
+            Check(!match.Participants[0].alive && match.Notice == "你被炮弹击中" && match.Phase == MatchPhase.Running,
+                "Hit player is eliminated and spectates remaining bots");
+
+            Setup(1); cannon.Advance(20);
             direction = (cannon.LaneEnd - cannon.LaneStart).normalized;
             side = Vector3.Cross(Vector3.up, direction);
             center = (cannon.LaneStart + cannon.LaneEnd) * 0.5f;
@@ -86,13 +104,13 @@ namespace SnowballArena
 
             Setup(0);
             Check(cannon.Elapsed == 0 && cannon.ShotsFired == 0 && !cannon.HasVisuals, "Restart clears the clock and old projectile");
-            cannon.Advance(59);
-            Check(!cannon.HasVisuals, "Restart waits a fresh 60 seconds");
+            cannon.Advance(19);
+            Check(!cannon.HasVisuals, "Restart waits a fresh 20 seconds");
             cannon.Advance(1);
             center = (cannon.LaneStart + cannon.LaneEnd) * 0.5f;
             Place(0, center); cannon.Advance(3); cannon.Advance(0.8f); match.ResolveEliminations();
             Check(match.Result == "练习结束" && !cannon.HasVisuals, "Practice mode also ends immediately on cannon hit");
-            Setup(2); cannon.Advance(60); match.ReturnToMenu();
+            Setup(2); cannon.Advance(20); match.ReturnToMenu();
             Check(cannon.Elapsed == 0 && !cannon.HasVisuals && match.Participants.Count == 0, "Return to menu removes warning and resets hazards");
         }
         private void Setup(int bots) { match.StartMatch(bots); match.BeginRunning(); Freeze(); }

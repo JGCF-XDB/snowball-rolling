@@ -8,7 +8,7 @@ namespace SnowballArena
     public sealed class CannonDirector : MonoBehaviour
     {
         public MatchController match;
-        public float startAfterSeconds = 60f;
+        public float startAfterSeconds = 20f;
         public float flashHalfPeriod = 0.5f;
         public float projectileSpeed = 18f;
         public float projectileRadius = 0.3f;
@@ -22,6 +22,7 @@ namespace SnowballArena
         public Vector3 ShotPosition { get; private set; }
         public bool WarningVisible => warning != null && warning.enabled;
         public bool HasVisuals => root != null;
+        public bool HasProjectile => shot != null;
         private float stageTime, travelled, lastAngle = float.NaN;
         private GameObject root, shot;
         private LineRenderer warning;
@@ -49,8 +50,15 @@ namespace SnowballArena
                     Stage == CannonStage.Warning ? Mathf.Max(0.05f, flashHalfPeriod) * 6f :
                     Vector3.Distance(LaneStart, LaneEnd) / Mathf.Max(0.1f, projectileSpeed);
                 float step = Mathf.Min(remaining, Mathf.Max(0, duration - stageTime));
-                if (Stage == CannonStage.Flying) MoveShot(step, (deltaTime - remaining) / deltaTime, (deltaTime - remaining + step) / deltaTime);
+                float hitFraction = Stage == CannonStage.Flying ? MoveShot(step, (deltaTime - remaining) / deltaTime, (deltaTime - remaining + step) / deltaTime) : -1;
+                if (hitFraction >= 0) step *= hitFraction;
                 stageTime += step; Elapsed += step; remaining -= step;
+                if (hitFraction >= 0)
+                {
+                    stageTime = 0;
+                    if (!SpawnCannon()) { Stop(); break; }
+                    continue;
+                }
                 if (Stage == CannonStage.Warning)
                 {
                     int half = Mathf.FloorToInt(stageTime / Mathf.Max(0.05f, flashHalfPeriod));
@@ -102,25 +110,48 @@ namespace SnowballArena
             shot.transform.position = ShotPosition;
         }
 
-        private void MoveShot(float step, float fromFraction, float toFraction)
+        private float MoveShot(float step, float fromFraction, float toFraction)
         {
             Vector3 from = ShotPosition;
-            travelled = Mathf.Min(Vector3.Distance(LaneStart, LaneEnd), travelled + Mathf.Max(0.1f, projectileSpeed) * step);
-            ShotPosition = LaneStart + (LaneEnd - LaneStart).normalized * travelled;
+            float nextTravelled = Mathf.Min(Vector3.Distance(LaneStart, LaneEnd), travelled + Mathf.Max(0.1f, projectileSpeed) * step);
+            Vector3 end = LaneStart + (LaneEnd - LaneStart).normalized * nextTravelled;
             // Sweep relative motion so a fast snowball and a fast projectile cannot cross
-            // between physics steps without a hit. The shot penetrates until the far edge.
+            // between physics steps without a hit. Choose earliest surface contact, not
+            // participant-list order or distance to the sphere's center.
+            MatchParticipant firstHit = null;
+            float earliest = float.PositiveInfinity;
             foreach (var participant in match.Participants)
             {
                 if (!participant.alive) continue;
                 Vector3 current = participant.body.RigidBody.position;
                 Vector3 previous = previousPositions.TryGetValue(participant, out var p) ? p : current;
-                Vector3 a = from - Vector3.Lerp(previous, current, fromFraction), b = ShotPosition - Vector3.Lerp(previous, current, toFraction);
+                Vector3 a = from - Vector3.Lerp(previous, current, fromFraction), b = end - Vector3.Lerp(previous, current, toFraction);
                 Vector3 segment = b - a;
-                float t = segment.sqrMagnitude > 0.000001f ? Mathf.Clamp01(-Vector3.Dot(a, segment) / segment.sqrMagnitude) : 0;
                 float radius = participant.body.Radius + projectileRadius;
-                if ((a + segment * t).sqrMagnitude <= radius * radius) match.Eliminate(participant, EliminationCause.Cannon);
+                float c = a.sqrMagnitude - radius * radius;
+                float t = 0;
+                if (c > 0)
+                {
+                    float lengthSquared = segment.sqrMagnitude;
+                    float projection = Vector3.Dot(a, segment);
+                    float discriminant = projection * projection - lengthSquared * c;
+                    if (lengthSquared < 0.000001f || projection >= 0 || discriminant < 0) continue;
+                    t = (-projection - Mathf.Sqrt(discriminant)) / lengthSquared;
+                    if (t < 0 || t > 1) continue;
+                }
+                if (t < earliest) { earliest = t; firstHit = participant; }
             }
+            if (firstHit != null)
+            {
+                ShotPosition = Vector3.Lerp(from, end, earliest);
+                travelled = Mathf.Lerp(travelled, nextTravelled, earliest);
+                match.Eliminate(firstHit, EliminationCause.Cannon);
+                shot.SetActive(false); Destroy(shot); shot = null;
+                return earliest;
+            }
+            travelled = nextTravelled; ShotPosition = end;
             shot.transform.position = ShotPosition;
+            return -1;
         }
 
         private void EnsureMaterials()

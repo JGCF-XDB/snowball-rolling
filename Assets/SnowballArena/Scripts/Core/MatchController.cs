@@ -184,7 +184,7 @@ namespace SnowballArena
             {
                 var r = new Rect(w / 2 - 230, h / 2 - 182, 460, 364); Panel(r);
                 GUI.Label(new Rect(r.x + 32, r.y + 22, 400, 52), "留在雪山之巅", title);
-                GUI.Label(new Rect(r.x + 32, r.y + 84, 400, 30), "最后存活者获胜 · 60秒后炮击", label);
+                GUI.Label(new Rect(r.x + 32, r.y + 84, 400, 30), "最后存活者获胜 · 20秒后炮击", label);
                 GUI.Label(new Rect(r.x + 32, r.y + 130, 250, 30), "机器人数量", label);
                 if (GUI.Button(new Rect(r.x + 32, r.y + 176, 60, 44), "−", button)) botCount = Mathf.Max(0, botCount - 1);
                 GUI.Label(new Rect(r.x + 116, r.y + 178, 210, 44), botCount == 0 ? "0  ·  自由练习" : botCount + "  位对手", heading);
