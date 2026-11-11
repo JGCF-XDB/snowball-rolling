@@ -29,6 +29,8 @@ namespace SnowballArena
         public float flashHalfPeriod = 0.5f;
         public float projectileSpeed = 18f;
         public float projectileRadius = 0.3f;
+        [Tooltip("Visual style of the snowball explosion. Review the three rendered options in docs/art/cannon-snowball-explosion.")]
+        public SnowballExplosionStyle snowballExplosionStyle = SnowballExplosionStyle.IceShatter;
         public float Elapsed { get; private set; }
         public int ShotsFired { get; private set; }
         public int CycleCount { get; private set; }
@@ -70,6 +72,8 @@ namespace SnowballArena
         {
             Stop(); stopped = false; Elapsed = 0;
             ShotsFired = CycleCount = 0; previousPositions.Clear();
+            // A new round must never inherit a half-finished explosion from the previous one.
+            SnowballExplosion.ClearAll();
         }
         public void Stop()
         {
@@ -119,8 +123,12 @@ namespace SnowballArena
                 {
                     // Read the shot position before the cannon is rebuilt for its next cycle.
                     Vector3 impactPoint = hitCannon.ShotPosition;
-                    EmitImpact(impactPoint, (hitCannon.LaneEnd - hitCannon.LaneStart).normalized);
+                    Vector3 direction = (hitCannon.LaneEnd - hitCannon.LaneStart).normalized;
+                    EmitImpact(impactPoint, direction);
                     if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.CannonExplosion(impactPoint);
+                    // The snowball explosion snapshots the victim before Eliminate deactivates it.
+                    SnowballExplosion.Play(victim.body, direction, snowballExplosionStyle, match.transform);
+                    if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.SnowballDestroyed(snowballExplosionStyle);
                     match.Eliminate(victim, EliminationCause.Cannon);
                     if (!SpawnCannon(hitCannon)) { Stop(); break; }
                 }

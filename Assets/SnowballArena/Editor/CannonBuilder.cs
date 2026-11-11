@@ -26,6 +26,7 @@ namespace SnowballArena.Editor
                 AssetDatabase.CreateAsset(new Material(shader) { name = "CannonWarning" }, warningPath);
             }
             AssetDatabase.SaveAssets();
+            SnowballExplosionPreview.Validate();
             MatchSceneBuilder.BuildGame();
         }
     }

@@ -26,7 +26,27 @@ namespace SnowballArena
             yield return null;
             Directory.CreateDirectory(output);
             string error = null;
-            try { Run(); } catch (Exception ex) { error = ex.ToString(); }
+            SnowballExplosion finalExplosion = null;
+            try { Run(); finalExplosion = PrepareFinalExplosion(); } catch (Exception ex) { error = ex.ToString(); }
+            if (error == null)
+            {
+                // Let real player frames, rather than manual Advance calls, expire the final hit.
+                float deadline = Time.realtimeSinceStartup + 5f;
+                bool resultsWithExplosion = false;
+                while ((finalExplosion != null || match.Phase != MatchPhase.Results) && Time.realtimeSinceStartup < deadline)
+                {
+                    resultsWithExplosion |= match.Phase == MatchPhase.Results && finalExplosion != null;
+                    yield return null;
+                }
+                try
+                {
+                    Check(resultsWithExplosion, "Results panel opens while the final-hit explosion keeps playing");
+                    Check(finalExplosion == null && SnowballExplosion.Active.Count == 0,
+                        "Final-hit explosion expires and unregisters automatically in player frames");
+                    match.ReturnToMenu();
+                }
+                catch (Exception ex) { error = ex.ToString(); }
+            }
             File.WriteAllText(Path.Combine(output, "cannon-validation.txt"), "passed=" + (error == null) + "\n" + string.Join("\n", checks) + "\nerror=" + error);
             Application.Quit(error == null ? 0 : 1);
         }
@@ -37,6 +57,8 @@ namespace SnowballArena
             // takes the same path.
             UnityEngine.Random.InitState(CannonSeed);
             match = FindFirstObjectByType<MatchController>(); match.enabled = false;
+            match.celebrateVictory = false;
+            CheckSnowballExplosionAssets();
             match.StartMatch(3);
             var cannon = match.Cannon;
             cannon.Advance(70);
@@ -124,6 +146,22 @@ namespace SnowballArena
             RunSelectedVisuals();
             RunEscalation();
         }
+        private void CheckSnowballExplosionAssets()
+        {
+            var dust = Resources.Load<Material>(SnowballExplosion.DustMaterialName);
+            var glow = Resources.Load<Material>(SnowballExplosion.GlowMaterialName);
+            var snow = Resources.Load<Material>(SnowballExplosion.SnowMaterialName);
+            var ice = Resources.Load<Material>(SnowballExplosion.IceMaterialName);
+            Check(dust != null && glow != null && snow != null && ice != null,
+                "Player build includes all snowball explosion materials");
+            Check(dust != null && dust.shader != null && dust.shader.name == "SnowArena/SnowExplosion"
+                && dust.shader.isSupported && glow != null && glow.shader != null
+                && glow.shader.name == "SnowArena/SnowExplosion" && glow.shader.isSupported,
+                "Player build includes the supported snowball explosion shader");
+            Check(match.Cannon.snowballExplosionStyle == SnowballExplosionStyle.IceShatter,
+                "Selected ice-shatter explosion style is the default");
+        }
+
         private void CheckAngles(string name)
         {
             bool distinct = true;
@@ -218,13 +256,52 @@ namespace SnowballArena
             CaptureClose("selected-cannon-launch-close.png", state.LaneStart - direction * 0.8f, direction);
             cannon.Advance(0.19f);
             Check(!match.Participants[1].alive && cannon.ActiveEffectCount == 1, "Impact removes one target and emits one decorative ice-and-ember burst");
+            Check(SnowballExplosion.Active.Count == 1, "Player build spawns exactly one snowball explosion per cannon kill");
+            var explosion = SnowballExplosion.Active[0];
+            Check(explosion != null && explosion.Style == cannon.snowballExplosionStyle
+                && explosion.PuffCount > 30 && explosion.ChunkCount >= 10
+                && explosion.InfluenceRadius > explosion.Radius * 2.4f,
+                "Snowball explosion uses the selected style and scales with the victim radius");
+            Check(explosion.GetComponentsInChildren<Collider>(true).Length == 0,
+                "Snowball explosion adds no colliders or gameplay obstacles");
+            for (int step = 0; step < 4; step++) explosion.Advance(0.05f);
+            Capture("snowball-explosion-runtime.png");
             cannon.Advance(0.07f);
             CaptureClose("selected-cannon-impact-close.png", firingOrigin + direction * 3.85f, direction);
             cannon.Advance(0.4f);
+            for (int step = 0; step < 32; step++) explosion.Advance(0.05f);
+            Check(!explosion.Advance(0.05f), "Snowball explosion finishes within its authored lifetime");
             Check(cannon.ActiveEffectCount == 0, "Decorative impact fragments expire after their short lifetime");
             match.ReturnToMenu();
+            Check(SnowballExplosion.Active.Count == 0, "Menu clears every live snowball explosion");
+            Check(explosion == null || !explosion.gameObject.activeSelf,
+                "Menu immediately hides old explosion visuals before deferred destruction");
             Check(cannon.ActiveEffectCount == 0 && cannon.ActiveCannonCount == 0, "Menu removes selected models, muzzle flashes and decorative effects");
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "--cannon-motion") >= 0) CaptureMotion();
+        }
+
+        private SnowballExplosion PrepareFinalExplosion()
+        {
+            match.celebrateVictory = true;
+            match.victorySeconds = 0.3f;
+            Setup(1);
+            var cannon = match.Cannon;
+            cannon.Advance(20);
+            var state = cannon.Cannons[0];
+            var direction = (state.LaneEnd - state.LaneStart).normalized;
+            var center = (state.LaneStart + state.LaneEnd) * 0.5f;
+            Place(0, center + Vector3.Cross(Vector3.up, direction) * 5f);
+            Place(1, state.LaneStart + direction * 5f);
+            cannon.Advance(3);
+            cannon.Advance(0.4f);
+            match.ResolveEliminations();
+            Check(match.Phase == MatchPhase.Victory && SnowballExplosion.Active.Count == 1,
+                "Victory stage stops the cannon while preserving exactly one final-hit explosion");
+            var explosion = SnowballExplosion.Active[0];
+            Check(explosion != null && explosion.gameObject.activeInHierarchy && !explosion.Manual,
+                "Final-hit explosion keeps playing automatically during the victory stage");
+            match.enabled = true;
+            return explosion;
         }
 
         private void CaptureMotion()
@@ -241,6 +318,10 @@ namespace SnowballArena
             for (int frame = 0; frame < 120; frame++)
             {
                 Capture("motion/" + frame.ToString("D3") + ".png");
+                // This entire capture runs in one player frame, so step the same effect clock
+                // that Update normally drives and hide finished visuals before rendering again.
+                foreach (var explosion in SnowballExplosion.Active)
+                    if (!explosion.Advance(1f / 24f)) explosion.gameObject.SetActive(false);
                 cannon.Advance(1f / 24f);
             }
             match.ReturnToMenu();

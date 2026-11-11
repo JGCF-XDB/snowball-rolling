@@ -26,6 +26,17 @@
 /ArtSource/CannonConcepts/
 /Tools/Art/present_cannon_concepts.py
 
+# Keep only selected B delivery files; design comparisons and raw renders stay local.
+/docs/art/cannon-snowball-explosion/*
+!/docs/art/cannon-snowball-explosion/README.md
+!/docs/art/cannon-snowball-explosion/research.md
+!/docs/art/cannon-snowball-explosion/validation.txt
+!/docs/art/cannon-snowball-explosion/windows-validation.txt
+!/docs/art/cannon-snowball-explosion/windows-runtime-b.gif
+!/docs/art/cannon-snowball-explosion/windows-runtime-b.mp4
+!/docs/art/cannon-snowball-explosion/windows-runtime-b.png
+/Previews/
+
 # IDE and editor metadata
 .vs/
 .vscode/
