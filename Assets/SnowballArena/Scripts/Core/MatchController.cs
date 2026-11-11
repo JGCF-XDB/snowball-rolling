@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 namespace SnowballArena
 {
     public enum MatchPhase { Menu, Countdown, Running, Victory, Results }
+    public enum MenuPage { Home, Tutorial, Opponents }
     public enum EliminationCause { None, Fall, Cannon }
     public sealed class MatchParticipant
     {
@@ -31,6 +32,7 @@ namespace SnowballArena
         [Tooltip("Play the dark-stage spotlight beat before the results panel. Automation turns this off.")]
         public bool celebrateVictory = true;
         public MatchPhase Phase { get; private set; } = MatchPhase.Menu;
+        public MenuPage Page { get; private set; } = MenuPage.Home;
         public List<MatchParticipant> Participants { get; } = new List<MatchParticipant>();
         public int Remaining { get; private set; }
         public string Result { get; private set; }
@@ -56,9 +58,12 @@ namespace SnowballArena
                 if (keyboard.escapeKey.wasPressedThisFrame) ReturnToMenu();
                 if (Phase == MatchPhase.Menu)
                 {
-                    if (keyboard.leftArrowKey.wasPressedThisFrame) { botCount = Mathf.Max(0, botCount - 1); Click(); }
-                    if (keyboard.rightArrowKey.wasPressedThisFrame) { botCount = Mathf.Min(15, botCount + 1); Click(); }
-                    if (keyboard.enterKey.wasPressedThisFrame) StartMatch(botCount);
+                    if (Page == MenuPage.Opponents)
+                    {
+                        if (keyboard.leftArrowKey.wasPressedThisFrame) { botCount = Mathf.Max(0, botCount - 1); Click(); }
+                        if (keyboard.rightArrowKey.wasPressedThisFrame) { botCount = Mathf.Min(15, botCount + 1); Click(); }
+                    }
+                    if (keyboard.enterKey.wasPressedThisFrame) AdvanceMenu();
                 }
                 else if (keyboard.rKey.wasPressedThisFrame && (Phase == MatchPhase.Results || Participants.Count > 0 && !Participants[0].alive)) StartMatch(botCount);
             }
@@ -207,7 +212,16 @@ namespace SnowballArena
             }
         }
 
-        public void ReturnToMenu() { VictoryStage.End(); ClearParticipants(); Phase = MatchPhase.Menu; Notice = null; Click(); }
+        public void AdvanceMenu()
+        {
+            if (Phase != MatchPhase.Menu) return;
+            if (Page == MenuPage.Home) Page = MenuPage.Tutorial;
+            else if (Page == MenuPage.Tutorial) Page = MenuPage.Opponents;
+            else { StartMatch(botCount); return; }
+            Click();
+        }
+
+        public void ReturnToMenu() { VictoryStage.End(); ClearParticipants(); Phase = MatchPhase.Menu; Page = MenuPage.Home; Notice = null; Click(); }
         private void ClearParticipants()
         {
             VictoryStage.End();
@@ -231,33 +245,12 @@ namespace SnowballArena
             if (Phase == MatchPhase.Menu)
             {
                 int previousCount = botCount;
-                bool start = winterMenu.Draw(w, h, ref botCount, Notice);
+                bool start = winterMenu.Draw(w, h, ref botCount, Notice, Page);
                 if (botCount != previousCount) Click();
-                if (start) StartMatch(botCount);
+                if (start) AdvanceMenu();
             }
             else
             {
-                winterMenu.Panel(new Rect(24, 22, 320, 100));
-                GUI.Label(new Rect(46, 35, 274, 42), "留在雪山之巅", winterMenu.HudHeading);
-                GUI.Label(new Rect(46, 79, 274, 26), "滚动成长 · 碰撞求生", winterMenu.HudSmall);
-                string hazardText = Phase == MatchPhase.Results || Phase == MatchPhase.Victory ? "对局结束" : Cannon.ActiveCannonCount > 0 ?
-                    $"炮台 {Cannon.ActiveCannonCount} · 预警 {Cannon.WarningCount} / 飞行 {Cannon.ProjectileCount}" :
-                    $"炮台将在 {Mathf.CeilToInt(Mathf.Max(0, Cannon.startAfterSeconds - Cannon.Elapsed))} 秒后出现";
-                winterMenu.Panel(new Rect(w / 2 - 210, 22, 420, 98));
-                GUI.Label(new Rect(w / 2 - 182, 35, 364, 26), $"对局 {Cannon.Elapsed:F0} 秒", winterMenu.HudSmall);
-                GUI.Label(new Rect(w / 2 - 186, 65, 372, 36), hazardText, winterMenu.Hazard);
-                winterMenu.Panel(new Rect(w - 304, 22, 280, 137));
-                GUI.Label(new Rect(w - 282, 36, 236, 42), "场上剩余  " + Remaining, winterMenu.HudHeading);
-                var player = Participants[0];
-                GUI.Label(new Rect(w - 282, 81, 236, 26), $"半径 {player.body.Radius:F2} m  ·  {player.body.RigidBody.mass:F0} kg", winterMenu.HudSmall);
-                GUI.Label(new Rect(w - 282, 110, 236, 26), player.alive ? "暖橙描边雪球是你" : Notice == "你被炮弹击中" ? "炮弹命中，观战中" : "你已出局，观战中", winterMenu.HudSmall);
-                winterMenu.Panel(new Rect(24, h - 86, 570, 62));
-                GUI.Label(new Rect(46, h - 72, 526, 32), "WASD 移动   ·   Esc 返回菜单   ·   出局后 R 重开", winterMenu.HudSmall);
-                if (Phase != MatchPhase.Results && Phase != MatchPhase.Victory)
-                {
-                    winterMenu.Panel(new Rect(w - 264, h - 92, 240, 68));
-                    if (GUI.Button(new Rect(w - 254, h - 82, 220, 48), "返回菜单  ·  Esc", winterMenu.SecondaryButton)) ReturnToMenu();
-                }
                 if (Phase == MatchPhase.Countdown)
                 {
                     winterMenu.Panel(new Rect(w / 2 - 68, h / 2 - 68, 136, 136));

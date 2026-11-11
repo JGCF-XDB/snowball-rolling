@@ -37,6 +37,13 @@ namespace SnowballArena
             if (match != null) match.celebrateVictory = false;
             yield return null;
             if (!Check(match != null && match.Phase == MatchPhase.Menu, "Starts at menu")) yield break;
+            int initialBots = match.botCount;
+            yield return KeyPress(Key.LeftArrow);
+            if (!Check(match.Page == MenuPage.Home && match.botCount == initialBots, "Home does not change opponent count")) yield break;
+            yield return KeyPress(Key.Enter);
+            if (!Check(match.Page == MenuPage.Tutorial && match.Participants.Count == 0, "Start opens tutorial without spawning balls")) yield break;
+            yield return KeyPress(Key.Enter);
+            if (!Check(match.Page == MenuPage.Opponents && match.Participants.Count == 0, "Tutorial continues to opponent selection")) yield break;
             yield return KeyPress(Key.LeftArrow);
             if (!Check(match.botCount == 4, "Keyboard changes robot count")) yield break;
             yield return KeyPress(Key.Enter);
@@ -50,6 +57,13 @@ namespace SnowballArena
             yield return WaitUntil(() => (player.RigidBody.position - start).magnitude > 0.1f, 2f);
             InputSystem.QueueStateEvent(keyboard, new KeyboardState());
             if (!Check((player.RigidBody.position - start).magnitude > 0.1f, "WASD moves the live player")) yield break;
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--menu-only") >= 0)
+            {
+                yield return KeyPress(Key.Escape);
+                if (!Check(match.Phase == MatchPhase.Menu && match.Page == MenuPage.Home && match.Participants.Count == 0,
+                    "Escape resets the menu flow and clears participants")) yield break;
+                Finish(); yield break;
+            }
             yield return new WaitForSeconds(2f);
             Capture("live-match.png");
             bool activeBot = false;

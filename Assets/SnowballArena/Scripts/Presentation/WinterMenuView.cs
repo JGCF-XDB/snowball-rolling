@@ -11,6 +11,10 @@ namespace SnowballArena
         private readonly Texture2D card, inset, snow;
         private readonly GUIStyle brand, title, subtitle, caption, count, hint, noticeStyle, stepButton, startButton;
         private static readonly Color Ink = new Color(0.10f, 0.25f, 0.34f);
+        private readonly GUIStyle logo, lessonText;
+        private readonly GUIStyle homeLead, homeSubtitle, keyHint;
+        private readonly Texture2D[] lessons;
+        private readonly Texture2D glassBackground;
         public GUIStyle HudHeading { get; }
         public GUIStyle HudSmall { get; }
         public GUIStyle Hazard { get; }
@@ -41,6 +45,15 @@ namespace SnowballArena
             HudSmall.alignment = TextAnchor.MiddleLeft;
             Hazard = Text(font, 22, FontStyle.Bold, new Color(0.61f, 0.20f, 0.07f));
             Countdown = Text(font, 64, FontStyle.Bold, new Color(0.61f, 0.20f, 0.07f));
+            logo = Text(font, 52, FontStyle.BoldAndItalic, Color.white);
+            logo.clipping = TextClipping.Overflow;
+            homeLead = Text(font, 28, FontStyle.Bold, Ink);
+            homeSubtitle = Text(font, 18, FontStyle.Normal, new Color(0.28f, 0.45f, 0.54f));
+            keyHint = Text(font, 13, FontStyle.Bold, new Color(0.90f, 0.97f, 1f));
+            lessonText = Text(font, 20, FontStyle.Bold, Ink);
+            lessonText.wordWrap = true;
+            lessons = new[] { Resources.Load<Texture2D>("Tutorial/Movement"), Resources.Load<Texture2D>("Tutorial/Cannon"), Resources.Load<Texture2D>("Tutorial/Victory") };
+            glassBackground = Resources.Load<Texture2D>("Tutorial/Glass");
         }
 
         public void Panel(Rect rect, bool decorate = true)
@@ -65,8 +78,9 @@ namespace SnowballArena
             Fill(new Rect(0, 0, width, height), new Color(0.06f, 0.20f, 0.30f, 0.32f));
         }
 
-        public bool Draw(float width, float height, ref int bots, string notice)
+        public bool Draw(float width, float height, ref int bots, string notice, MenuPage page)
         {
+            if (page == MenuPage.Tutorial) return DrawTutorial(width, height);
             Color oldColor = GUI.color;
             bool oldEnabled = GUI.enabled;
             GUI.color = Color.white;
@@ -100,9 +114,32 @@ namespace SnowballArena
             TintTexture(new Rect(r.xMax - 114, r.y - 4, 67, 11), snow, Color.white);
             Snowflake(new Vector2(r.x + 33, r.y + 50), 15, new Color(0.47f, 0.69f, 0.80f, 0.75f));
             Snowflake(new Vector2(r.xMax - 36, r.yMax - 40), 18, new Color(0.41f, 0.65f, 0.77f, 0.45f));
-            GUI.Label(new Rect(r.x + 60, r.y + 31, 400, 30), "雪山 · 滚雪球", brand);
-            GUI.Label(new Rect(r.x + 24, r.y + 82, 472, 58), "尽情地碰撞吧！", title);
-            GUI.Label(new Rect(r.x + 24, r.y + 143, 472, 36), "小心周围召唤的炮弹~", subtitle);
+            if (page == MenuPage.Home)
+            {
+                DrawSummit(new Vector2(r.center.x, r.y + 45));
+                DrawLogo(new Rect(r.x + 24, r.y + 76, 472, 78));
+                Color accent = new Color(0.41f, 0.65f, 0.76f, 0.5f);
+                Fill(new Rect(r.center.x - 106, r.y + 174, 86, 1), accent);
+                Fill(new Rect(r.center.x + 20, r.y + 174, 86, 1), accent);
+                Snowflake(new Vector2(r.center.x, r.y + 174), 8, accent);
+                GUI.Label(new Rect(r.x + 24, r.y + 202, 472, 42), "尽情地碰撞吧！", homeLead);
+                GUI.Label(new Rect(r.x + 24, r.y + 247, 472, 32), "小心周围召唤的炮弹~", homeSubtitle);
+                var playRect = new Rect(r.x + 60, r.y + 315, 400, 60);
+                TintTexture(new Rect(playRect.x, playRect.y + 5, playRect.width, playRect.height),
+                    startButton.normal.background, new Color(0.06f, 0.22f, 0.32f, 0.26f));
+                bool next = GUI.Button(playRect, "开始游戏", startButton);
+                // The shortcut is a quiet keycap inside the primary action.
+                var keyRect = new Rect(playRect.xMax - 66, playRect.y + 19, 48, 23);
+                Border(keyRect, new Color(0.83f, 0.94f, 1f, 0.40f));
+                GUI.Label(keyRect, "Enter", keyHint);
+                GUI.Label(new Rect(r.x + 30, r.y + 394, 460, 28), "滚动成长  ·  碰撞求生", hint);
+                GUI.color = oldColor;
+                GUI.enabled = oldEnabled;
+                return next;
+            }
+            GUI.Label(new Rect(r.x + 60, r.y + 31, 400, 30), "留在雪山之巅", brand);
+            GUI.Label(new Rect(r.x + 24, r.y + 82, 472, 58), "选择你的对手", title);
+            GUI.Label(new Rect(r.x + 24, r.y + 143, 472, 36), "准备好，向雪山之巅出发！", subtitle);
             Fill(new Rect(r.x + 100, r.y + 200, 320, 1), new Color(0.47f, 0.67f, 0.77f, 0.38f));
             GUI.Label(new Rect(r.x + 40, r.y + 214, 440, 25), "机器人数量", caption);
             GUI.DrawTexture(new Rect(r.x + 104, r.y + 249, 312, 55), inset);
@@ -113,11 +150,84 @@ namespace SnowballArena
             GUI.enabled = oldEnabled && bots < 15;
             if (GUI.Button(new Rect(r.xMax - 94, r.y + 249, 54, 55), "+", stepButton)) bots++;
             GUI.enabled = oldEnabled;
-            bool start = GUI.Button(new Rect(r.x + 40, r.y + 326, 440, 58), bots == 0 ? "开始练习   ·   Enter" : "开始游戏   ·   Enter", startButton);
+            bool start = GUI.Button(new Rect(r.x + 40, r.y + 326, 440, 58), bots == 0 ? "开始练习   ·   Enter" : "开始对局   ·   Enter", startButton);
             GUI.Label(new Rect(r.x + 30, r.y + 397, 460, 35), notice ?? "← → 调整人数    WASD 控制红色描边雪球", notice == null ? hint : noticeStyle);
             GUI.color = oldColor;
             GUI.enabled = oldEnabled;
             return start;
+        }
+
+        private void DrawLogo(Rect rect)
+        {
+            // Ice-carved lettering: extruded sides, dark rim and a snow-to-ice face.
+            Color old = GUI.color;
+            for (int depth = 7; depth >= 1; depth--)
+            {
+                GUI.color = Color.Lerp(new Color(0.08f, 0.21f, 0.34f), new Color(0.23f, 0.49f, 0.66f), 1f - depth / 7f);
+                GUI.Label(new Rect(rect.x + depth * 0.4f, rect.y + depth, rect.width, rect.height), "留在雪山之巅", logo);
+            }
+            GUI.color = new Color(0.12f, 0.35f, 0.51f);
+            for (int x = -1; x <= 1; x++)
+            for (int y = -1; y <= 1; y++)
+                if (x != 0 || y != 0)
+                    GUI.Label(new Rect(rect.x + x * 3, rect.y + y * 3, rect.width, rect.height), "留在雪山之巅", logo);
+            // Clipped bands tint only the glyphs, without a rectangular background.
+            const int bands = 16;
+            for (int band = 0; band < bands; band++)
+            {
+                float y = rect.height * band / bands;
+                float t = Mathf.InverseLerp(0.32f, 0.85f, (band + .5f) / bands);
+                GUI.color = Color.Lerp(Color.white, new Color(0.39f, 0.77f, 0.94f), t);
+                GUI.BeginGroup(new Rect(rect.x, rect.y + y, rect.width, rect.height / bands));
+                GUI.Label(new Rect(0, -y, rect.width, rect.height), "留在雪山之巅", logo);
+                GUI.EndGroup();
+            }
+            GUI.color = old;
+            Color glint = new Color(0.98f, 1f, 1f, 0.95f);
+            Snowflake(new Vector2(rect.center.x - 168, rect.center.y - 21), 8, glint);
+            Snowflake(new Vector2(rect.center.x + 162, rect.center.y + 12), 6, glint);
+        }
+
+        private static void DrawSummit(Vector2 center)
+        {
+            Color blue = new Color(0.36f, 0.58f, 0.70f, 0.75f);
+            var peak = center + new Vector2(0, -14);
+            Line(center + new Vector2(-31, 13), peak, blue);
+            Line(peak, center + new Vector2(27, 13), blue);
+            Line(center + new Vector2(-47, 13), center + new Vector2(-27, -5), blue);
+            Line(center + new Vector2(-27, -5), center + new Vector2(-17, 2), blue);
+            Line(center + new Vector2(16, 2), center + new Vector2(29, -7), blue);
+            Line(center + new Vector2(29, -7), center + new Vector2(46, 13), blue);
+            Line(center + new Vector2(-10, -5), center + new Vector2(-3, 1), blue);
+            Line(center + new Vector2(-3, 1), center + new Vector2(3, -3), blue);
+            Line(center + new Vector2(3, -3), center + new Vector2(9, -5), blue);
+        }
+
+        private bool DrawTutorial(float width, float height)
+        {
+            if (glassBackground != null)
+                GUI.DrawTexture(new Rect(0, 0, width, height), glassBackground, ScaleMode.ScaleAndCrop);
+            Fill(new Rect(0, 0, width, height), new Color(0.80f, 0.92f, 0.98f, 0.48f));
+            Border(new Rect(22, 22, width - 44, height - 44), new Color(1, 1, 1, 0.65f));
+            float left = (width - 1152) / 2, top = (height - 460) / 2;
+            GUI.Label(new Rect(left, top, 1152, 58), "雪山生存指南", title);
+            string[] descriptions = { "WASD控制红色描边雪球的方向", "注意躲避外侧袭来的炮弹！", "最后留在场上的雪球获得胜利！" };
+            for (int i = 0; i < 3; i++)
+            {
+                var panel = new Rect(left + i * 392, top + 92, 368, 282);
+                Panel(panel);
+                if (lessons[i] != null)
+                    GUI.DrawTexture(new Rect(panel.x + 14, panel.y + 14, 340, 191.25f), lessons[i], ScaleMode.ScaleToFit);
+                GUI.Label(new Rect(panel.x + 19, panel.y + 215, 330, 52), descriptions[i], lessonText);
+            }
+            GUI.Label(new Rect(left, top + 405, 1152, 40), "点击任意处继续  ·  Enter", subtitle);
+            // Handle release so the click that opened this page cannot skip it.
+            if (Event.current.type == EventType.MouseUp)
+            {
+                Event.current.Use();
+                return true;
+            }
+            return false;
         }
 
         private static GUIStyle Text(Font font, int size, FontStyle weight, Color color)
