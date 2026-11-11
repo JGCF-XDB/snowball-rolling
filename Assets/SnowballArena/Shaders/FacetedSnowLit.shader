@@ -65,14 +65,18 @@ Shader "SnowArena/FacetedSnowLit"
             if (_ContactDepth > 0.0)
             {
                 float distanceToContact = distance(objectPosition, _ContactPoint.xyz);
-                float falloff = saturate(1.0 - distanceToContact / max(_ContactRadius, 0.0001));
-                float depth = _ContactDepth * falloff * falloff;
+                // Smooth radial falloff. A squared falloff made the dent very local but left the
+                // rim untouched, so the silhouette never changed and the result read as shading
+                // rather than deformation.
+                float radial = saturate(distanceToContact / max(_ContactRadius, 0.0001));
+                float falloff = 1.0 - radial * radial * (3.0 - 2.0 * radial);
+                float depth = _ContactDepth * falloff;
                 objectPosition -= normalize(objectPosition) * depth;
-                // Moving vertices alone is invisible: the lighting never changes because the
-                // normals do not. Tilting them toward the contact is what makes the dent read.
+                // Normals tilt partway toward the contact: enough to catch light on the rim,
+                // not so much that the patch turns into a flat dark stain.
                 float3 towardContact = normalize(_ContactPoint.xyz - objectPosition);
-                objectNormal = normalize(lerp(objectNormal, towardContact, saturate(falloff * 1.15)));
-                dent = saturate(falloff * saturate(_ContactDepth * 3.5));
+                objectNormal = normalize(lerp(objectNormal, towardContact, saturate(falloff * 0.55)));
+                dent = saturate(falloff * saturate(_ContactDepth * 3.0));
             }
             VertexPositionInputs position = GetVertexPositionInputs(objectPosition);
             output.positionCS = position.positionCS;
@@ -110,7 +114,7 @@ Shader "SnowArena/FacetedSnowLit"
             float3 grainPosition = lerp(input.positionOS*4,input.positionWS,_GroundTracks);
             float grain = Noise(grainPosition.xz*27.0+grainPosition.y*3.4);
             float drift = Noise(grainPosition.xz*0.7+grainPosition.y)*0.6+Noise(grainPosition.xz*2.8)*0.4;
-            half3 albedo = input.color.rgb * _BaseColor.rgb * (1.0 - input.dent * 0.4);
+            half3 albedo = input.color.rgb * _BaseColor.rgb * (1.0 - input.dent * 0.22);
             albedo *= 1 + _SnowDetail * ((grain-0.5)*0.045+(drift-0.5)*0.07);
             if (_GroundTracks > 0.5 && normal.y > 0.8)
             {
