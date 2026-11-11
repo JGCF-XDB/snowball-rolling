@@ -7,6 +7,8 @@ namespace SnowballArena
     {
         public SnowballSettings settings;
         public Transform visual;
+        [Tooltip("Set by the match controller. Only the player's ball drives the heavy-hit feedback.")]
+        public bool isPlayer;
         public Rigidbody RigidBody { get; private set; }
         public float Radius { get; private set; }
         public double Volume { get; private set; }
@@ -21,6 +23,9 @@ namespace SnowballArena
             // Reset includes the knock bookkeeping: a reused ball must not inherit last round's shove.
             LastKnockedBy = null;
             LastKnockTime = float.NegativeInfinity;
+            // Re-authored prefabs have lost this reference before; fall back to the conventional
+            // child name so a new skin cannot silently disable squash and size updates.
+            if (visual == null) visual = transform.Find("Visual");
             RigidBody = GetComponent<Rigidbody>();
             // Added at runtime so every existing prefab and scene keeps working without
             // re-authoring components; it only clips upward speed created by a snowball hit.

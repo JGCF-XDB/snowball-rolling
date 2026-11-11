@@ -107,6 +107,28 @@ namespace SnowballArena.Editor
                     new Vector3(5f, radius, 0f), out _), "Shell already past the ball was still treated as a threat");
                 return "Approaching shell threatens, passed shell does not";
             });
+            Check("Ball squash registers against the contact axis", () =>
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeBuilder.PrefabPath);
+                Require(prefab != null, "Missing snowball prefab");
+                var instance = UnityEngine.Object.Instantiate(prefab);
+                try
+                {
+                    var body = instance.GetComponent<SnowballBody>();
+                    Require(body != null, "Prefab is missing SnowballBody");
+                    // SnowballFeedback is added by Initialize, not authored on the prefab.
+                    body.Initialize();
+                    var feedback = instance.GetComponent<SnowballFeedback>();
+                    Require(feedback != null, "Initialize did not add SnowballFeedback");
+                    Require(body.visual != null, "Prefab has no visual transform, so squash could never apply");
+                    feedback.ApplySquash(instance.transform.position + Vector3.right * body.Radius, 1f);
+                    float full = feedback.SquashDepth;
+                    Require(full > 0.2f, $"Full-strength hit only registered {full:F2} of squash");
+                    Require(full <= feedback.maximumSquash + 0.001f, "Squash exceeded maximumSquash");
+                    return $"Full strength registers {full:F2} against a {feedback.maximumSquash:F2} maximum";
+                }
+                finally { UnityEngine.Object.DestroyImmediate(instance); }
+            });
             Check("Every ball gets the impact clamp component", () =>
             {
                 using var world = new World();

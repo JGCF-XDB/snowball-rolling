@@ -14,7 +14,7 @@ namespace SnowballArena
         [Tooltip("Approach speed treated as a maximum-strength impact, in m/s. Matches the speed a real collision reaches on an 11 m platform.")]
         public float maximumImpactSpeed = 28f;
         [Tooltip("How far the mesh is compressed at the hardest impact.")]
-        [Range(0f, 0.6f)] public float maximumSquash = 0.34f;
+        [Range(0f, 0.6f)] public float maximumSquash = 0.42f;
         [Tooltip("Spring stiffness of the squash. Higher snaps back faster.")]
         [Min(1f)] public float squashStiffness = 210f;
         [Tooltip("Spring damping. Below critical damping leaves a visible rebound overshoot.")]
@@ -74,6 +74,11 @@ namespace SnowballArena
             if (impact < minimumImpactSpeed) return;
             var other = collision.collider.GetComponentInParent<SnowballBody>();
             bool ballToBall = other != null && other != ball;
+            // Heavy feedback is the player's channel: snow puffs, shake and hit stop only fire
+            // for contacts the player is part of, so bot-vs-bot collisions stay quiet. Both
+            // balls get the callback, so the check runs on either side of the contact.
+            bool playerInvolved = ball != null && ball.isPlayer || other != null && other.isPlayer;
+            if (!playerInvolved) return;
             // Both balls receive the callback for the same contact; only one reports it.
             if (ballToBall && other.gameObject.GetInstanceID() < gameObject.GetInstanceID()) return;
             // Square root keeps medium-speed hits meaningful; a linear curve pushed the
@@ -81,10 +86,17 @@ namespace SnowballArena
             float strength = Mathf.Sqrt(Mathf.InverseLerp(minimumImpactSpeed, maximumImpactSpeed, impact));
             Vector3 point = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
             if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.Impact(point, strength, !ballToBall);
-            if (ballToBall) Squash(point, strength);
+            if (ballToBall) ApplySquash(point, strength);
         }
 
-        private void Squash(Vector3 contactPoint, float strength)
+        /// <summary>Current compression depth, 0..maximumSquash. Exposed so tests can see it.</summary>
+        public float SquashDepth => squash;
+
+        /// <summary>
+        /// Registers a hit against the contact point. The spring integrates in LateUpdate, so this
+        /// only sets the target; call it from collision handling.
+        /// </summary>
+        public void ApplySquash(Vector3 contactPoint, float strength)
         {
             Vector3 axis = transform.position - contactPoint;
             if (axis.sqrMagnitude < 0.0001f) return;
@@ -112,7 +124,7 @@ namespace SnowballArena
             float size = ball.Radius * 2f;
             Vector3 d = squashAxis;
             float alongAxis = 1f - squash;        // squeezed along the contact axis
-            float sideways = 1f + squash * 0.5f;  // bulges out, roughly keeping volume
+            float sideways = 1f + squash * 0.75f;  // bulges out; exaggerated so the skin still reads
             ball.visual.localScale = new Vector3(
                 size * (alongAxis * d.x * d.x + sideways * (1f - d.x * d.x)),
                 size * (alongAxis * d.y * d.y + sideways * (1f - d.y * d.y)),

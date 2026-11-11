@@ -98,6 +98,7 @@ namespace SnowballArena
                 var body = instance.GetComponent<SnowballBody>();
                 var motor = instance.GetComponent<SnowballMotor>();
                 var participant = new MatchParticipant { body = body, motor = motor, isPlayer = i == 0, displayName = i == 0 ? "你" : "雪球 " + i };
+                body.isPlayer = i == 0;
                 Participants.Add(participant);
                 instance.GetComponent<SnowballAppearance>()?.SetIdentity(i);
                 var input = instance.GetComponent<PlayerInputSource>();

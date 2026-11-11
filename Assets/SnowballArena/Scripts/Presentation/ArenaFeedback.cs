@@ -16,13 +16,13 @@ namespace SnowballArena
 
         [Header("Impact feel")]
         [Tooltip("Impact strength needed before the camera moves at all. Below this only sound, snow and squash react.")]
-        [Range(0f, 1f)] public float shakeThreshold = 0.62f;
+        [Range(0f, 1f)] public float shakeThreshold = 0.48f;
         [Min(0f)] public float shakeMinAmplitude = 0.07f;
         [Min(0f)] public float shakeMaxAmplitude = 0.3f;
         [Tooltip("Impact strength that bursts the extra snow ring.")]
-        [Range(0f, 1f)] public float burstThreshold = 0.75f;
+        [Range(0f, 1f)] public float burstThreshold = 0.62f;
         [Tooltip("Impact strength that earns a hit stop. Deliberately rare, so it reads as a reward.")]
-        [Range(0f, 1f)] public float hitstopThreshold = 0.9f;
+        [Range(0f, 1f)] public float hitstopThreshold = 0.82f;
         [Min(0f)] public float hitstopMinSeconds = 0.02f;
         [Min(0f)] public float hitstopMaxSeconds = 0.035f;
 
