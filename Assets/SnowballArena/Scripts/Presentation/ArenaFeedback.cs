@@ -132,6 +132,23 @@ namespace SnowballArena
         public void CannonExplosion(Vector3 at) =>
             Play(library == null ? null : library.cannonExplosion, at, masterVolume, Random.Range(0.9f, 1.05f), true);
 
+        /// <summary>
+        /// Extra kick for the cannonball killing a snowball. The boom itself is already on
+        /// CannonExplosion; this only adds the impact camera move and, for the heaviest style,
+        /// a very short hit stop so the explosion reads as the cause of the elimination.
+        /// </summary>
+        public void SnowballDestroyed(SnowballExplosionStyle style)
+        {
+            var shaker = Shake();
+            if (shaker != null)
+            {
+                float amplitude = style == SnowballExplosionStyle.AvalancheBlast ? 0.22f
+                    : style == SnowballExplosionStyle.IceShatter ? 0.15f : 0.11f;
+                shaker.Shake(amplitude, style == SnowballExplosionStyle.AvalancheBlast ? 0.24f : 0.18f);
+            }
+            if (style == SnowballExplosionStyle.AvalancheBlast) Hitstop(0.028f);
+        }
+
         /// <summary>Player knocked a rival off the platform. Played flat (2D) so it reads as a reward.</summary>
         public void Knockdown() =>
             Play(library == null ? null : library.knockdown, Vector3.zero, 0.9f * masterVolume, 1f, false);
