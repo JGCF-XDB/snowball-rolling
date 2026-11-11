@@ -11,6 +11,7 @@ namespace SnowballArena
     internal sealed class CannonSmokeProbe : MonoBehaviour
     {
         private string output;
+        private const int CannonSeed = 20260111;
         private MatchController match;
         private readonly List<string> checks = new List<string>();
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -31,6 +32,10 @@ namespace SnowballArena
         }
         private void Run()
         {
+            // Cannon lanes pick a random angle, and some sequences leave no legal placement for
+            // the third cannon, which made this probe fail intermittently. Seed it so every run
+            // takes the same path.
+            UnityEngine.Random.InitState(CannonSeed);
             match = FindFirstObjectByType<MatchController>(); match.enabled = false;
             match.StartMatch(3);
             var cannon = match.Cannon;

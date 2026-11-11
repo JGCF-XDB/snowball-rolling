@@ -27,10 +27,38 @@ namespace SnowballArena.Editor
         public static void BuildGame()
         {
             if (!File.Exists(MatchPath)) CreateMatch();
+            EnsurePlayerHalo();
             PrototypeValidation.Run();
             GrowthCollisionValidation.Run();
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MatchPath, true), new EditorBuildSettingsScene(PrototypeBuilder.ScenePath, true) };
             BuildWindowsGame();
+        }
+
+        // Player identity materials live in Resources so the runtime can load them by name and so
+        // the shaders they use survive player shader stripping.
+        public static void EnsurePlayerHalo()
+        {
+            EnsureRuntimeMaterial("PlayerHalo", "SnowArena/PlayerHalo", new Color(1f, 0.62f, 0.12f, 0.6f));
+        }
+
+        private static Material EnsureRuntimeMaterial(string name, string shaderName, Color color)
+        {
+            string folder = PrototypeBuilder.Root + "/Resources";
+            if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder(PrototypeBuilder.Root, "Resources");
+            string path = folder + "/" + name + ".mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            var shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+                Debug.LogWarning($"Missing {shaderName} shader: {name} will not render");
+                return null;
+            }
+            material = new Material(shader) { name = name };
+            material.SetColor("_BaseColor", color);
+            AssetDatabase.CreateAsset(material, path);
+            AssetDatabase.SaveAssets();
+            return material;
         }
 
         [MenuItem("Snowball Arena/Build Windows Game")]
