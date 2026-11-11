@@ -1,6 +1,10 @@
 {
   "name": "SnowballArena.Runtime",
   "rootNamespace": "SnowballArena",
-  "references": ["Unity.InputSystem"],
+  "references": [
+    "Unity.InputSystem",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
   "autoReferenced": true
 }

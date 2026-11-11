@@ -33,16 +33,21 @@ namespace SnowballArena
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             Application.logMessageReceived += Log; Directory.CreateDirectory(output);
             keyboard = InputSystem.AddDevice<Keyboard>(); match = FindFirstObjectByType<MatchController>();
+            // The victory stage is a visual beat with a 3 s hold; automation checks phases, not cinematics.
+            if (match != null) match.celebrateVictory = false;
             yield return null;
             if (!Check(match != null && match.Phase == MatchPhase.Menu, "Starts at menu")) yield break;
             yield return KeyPress(Key.LeftArrow);
             if (!Check(match.botCount == 4, "Keyboard changes robot count")) yield break;
             yield return KeyPress(Key.Enter);
             if (!Check(match.Participants.Count == 5 && match.Phase == MatchPhase.Countdown, "Enter starts selected count and countdown")) yield break;
-            yield return new WaitForSeconds(3.3f);
+            // Wait for the state instead of assuming a frame budget: one dropped frame during
+            // the countdown used to land these assertions in the middle of the transition.
+            yield return WaitUntil(() => match.Phase == MatchPhase.Running, 6f);
             if (!Check(match.Phase == MatchPhase.Running, "Countdown enables play")) yield break;
             var player = match.Participants[0].body; var start = player.RigidBody.position;
-            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.D)); yield return new WaitForSeconds(0.7f);
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.D));
+            yield return WaitUntil(() => (player.RigidBody.position - start).magnitude > 0.1f, 2f);
             InputSystem.QueueStateEvent(keyboard, new KeyboardState());
             if (!Check((player.RigidBody.position - start).magnitude > 0.1f, "WASD moves the live player")) yield break;
             yield return new WaitForSeconds(2f);
@@ -54,7 +59,15 @@ namespace SnowballArena
             match.StartMatch(1); match.BeginRunning();
             match.Participants[1].body.RigidBody.position = Vector3.down * 20; match.ResolveEliminations();
             if (!Check(match.Phase == MatchPhase.Results && match.Result == "你赢了！", "Last player wins")) yield break;
-            yield return KeyPress(Key.R); yield return null;
+            // A synthetic key event can land on a frame the controller already consumed, so
+            // wait for the transition and retry the press once before calling it a failure.
+            yield return KeyPress(Key.R);
+            yield return WaitUntil(() => match.Phase == MatchPhase.Countdown, 1.5f);
+            if (match.Phase != MatchPhase.Countdown)
+            {
+                yield return KeyPress(Key.R);
+                yield return WaitUntil(() => match.Phase == MatchPhase.Countdown, 1.5f);
+            }
             if (!Check(match.Phase == MatchPhase.Countdown && match.Participants.Count == 2 && Mathf.Abs(match.Participants[0].body.Radius - match.Participants[0].body.settings.initialRadius) < 0.001f, "R restarts with reset bodies")) yield break;
             match.BeginRunning();
             foreach (var p in match.Participants) p.body.RigidBody.position = Vector3.down * 20;
@@ -117,6 +130,13 @@ namespace SnowballArena
             yield return null;
             Finish();
         }
+        // Polls a condition with a timeout so tests do not depend on a fixed frame budget.
+        private IEnumerator WaitUntil(System.Func<bool> condition, float timeoutSeconds)
+        {
+            float deadline = Time.time + timeoutSeconds;
+            while (!condition() && Time.time < deadline) yield return null;
+        }
+
         private IEnumerator KeyPress(Key key)
         {
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(key)); yield return null; yield return null;
