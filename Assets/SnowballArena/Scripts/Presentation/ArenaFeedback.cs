@@ -336,7 +336,9 @@ namespace SnowballArena
         {
             if (burst == null) return;
             if (!burst.isPlaying) burst.Play();
-            int count = Mathf.RoundToInt(Mathf.Lerp(10f, 34f, strength));
+            // Density was hiding the contact dent: a dozen large opaque puffs sat right on top
+            // of the point we want the player to see.
+            int count = Mathf.RoundToInt(Mathf.Lerp(5f, 16f, strength));
             for (int i = 0; i < count; i++) EmitOne(point, strength, 1f);
             // A near-maximum hit gets a wider, faster ring so the reward reads as a burst
             // rather than just a slightly bigger puff.
@@ -346,13 +348,16 @@ namespace SnowballArena
 
         private void EmitOne(Vector3 point, float strength, float speedScale)
         {
+            // Thrown mostly upward and outward, never straight through the ball, so the burst
+            // reads as snow flying off rather than a cloud sitting over the impact.
+            Vector3 flare = new Vector3(Random.Range(-1f, 1f), Random.Range(0.45f, 1.6f), Random.Range(-1f, 1f)).normalized;
             var emit = new ParticleSystem.EmitParams
             {
-                position = point + Random.insideUnitSphere * 0.22f,
-                velocity = (Random.onUnitSphere * Random.Range(1.1f, 3.4f) + Vector3.up * 1.3f) * speedScale,
-                startSize = Random.Range(0.22f, 0.55f) * Mathf.Lerp(0.85f, 1.4f, strength),
-                startLifetime = Random.Range(0.25f, 0.6f),
-                startColor = new Color(0.95f, 0.98f, 1f, 0.9f),
+                position = point + Random.insideUnitSphere * 0.1f,
+                velocity = (flare * Random.Range(1.6f, 3.6f) + Vector3.up * 1.1f) * speedScale,
+                startSize = Random.Range(0.12f, 0.32f) * Mathf.Lerp(0.9f, 1.3f, strength),
+                startLifetime = Random.Range(0.16f, 0.34f),
+                startColor = new Color(0.95f, 0.98f, 1f, 0.55f),
                 applyShapeToPosition = false,
             };
             burst.Emit(emit, 1);

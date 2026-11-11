@@ -19,6 +19,8 @@ namespace SnowballArena
         [Min(1f)] public float squashStiffness = 130f;
         [Tooltip("Spring damping. Below critical damping leaves a visible rebound overshoot.")]
         [Min(0f)] public float squashDamping = 6f;
+        [Tooltip("Seconds the dent is held at full depth before the spring releases. Without this the deform is gone before the eye registers it.")]
+        [Min(0f)] public float squashHoldSeconds = 0.35f;
 
         [Header("Rolling")]
         [Range(0f, 1f)] public float rollVolume = 0.2f;
@@ -37,6 +39,7 @@ namespace SnowballArena
         private Vector3 squashAxis = Vector3.up;
         private float squash;
         private float squashVelocity;
+        private float holdUntil;
 
         private void Awake() => Initialize();
 
@@ -120,7 +123,8 @@ namespace SnowballArena
             // Depth follows impact strength: a light nudge barely deforms the snowball and
             // maximumSquash is reserved for a full-speed hit.
             squash = Mathf.Max(squash, maximumSquash * Mathf.Pow(Mathf.Clamp01(strength), 1.5f));
-            squashVelocity = Mathf.Min(squashVelocity, 0f);
+            squashVelocity = 0f;
+            holdUntil = Time.time + Mathf.Max(0f, squashHoldSeconds);
         }
 
         private void LateUpdate()
@@ -131,6 +135,15 @@ namespace SnowballArena
             // the hit reads as a bounce rather than a static dent.
             squashVelocity += (-squashStiffness * squash - squashDamping * squashVelocity) * dt;
             squash += squashVelocity * dt;
+            // Hold the crush at full depth for a moment. Springing straight back was too fast to
+            // see, especially with the snow burst covering the contact point.
+            if (Time.time < holdUntil)
+            {
+                ball.visual.localScale = Vector3.one * (ball.Radius * 2f);
+                ApplyDent(squash);
+                squashVelocity = 0f;
+                return;
+            }
             if (Mathf.Abs(squash) < 0.0005f && Mathf.Abs(squashVelocity) < 0.03f)
             {
                 squash = 0f;
@@ -159,8 +172,8 @@ namespace SnowballArena
             if (target == null) return;
             target.GetPropertyBlock(dentProperties);
             dentProperties.SetVector("_ContactPoint", new Vector4(contactLocal.x, contactLocal.y, contactLocal.z, 0f));
-            dentProperties.SetFloat("_ContactDepth", depth * 1.15f);
-            dentProperties.SetFloat("_ContactRadius", 0.55f);
+            dentProperties.SetFloat("_ContactDepth", depth * 1.5f);
+            dentProperties.SetFloat("_ContactRadius", 0.68f);
             target.SetPropertyBlock(dentProperties);
         }
 
