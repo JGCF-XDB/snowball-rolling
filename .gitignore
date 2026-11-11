@@ -12,6 +12,11 @@
 [Bb]uilds/
 [Tt]est[Rr]esults/
 
+# Python tooling caches and reproducible UI inspection reports
+__pycache__/
+*.py[cod]
+/ArtSource/UI/lettering-bounds.json
+
 # Local art explorations and camera/layout comparisons
 /docs/art/alpine-layouts-60/
 /docs/art/alpine-layouts-shared-60/
