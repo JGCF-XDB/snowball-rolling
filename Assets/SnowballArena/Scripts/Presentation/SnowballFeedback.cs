@@ -144,8 +144,8 @@ namespace SnowballArena
             if (visualRenderer == null) return;
             visualRenderer.GetPropertyBlock(dentProperties);
             dentProperties.SetVector("_ContactPoint", new Vector4(contactLocal.x, contactLocal.y, contactLocal.z, 0f));
-            dentProperties.SetFloat("_ContactDepth", depth * 0.5f);
-            dentProperties.SetFloat("_ContactRadius", 0.75f);
+            dentProperties.SetFloat("_ContactDepth", depth * 0.72f);
+            dentProperties.SetFloat("_ContactRadius", 1.0f);
             visualRenderer.SetPropertyBlock(dentProperties);
         }
 

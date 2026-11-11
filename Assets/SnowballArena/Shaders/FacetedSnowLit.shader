@@ -46,6 +46,7 @@ Shader "SnowArena/FacetedSnowLit"
             half4 color : COLOR;
             half fog : TEXCOORD2;
             float3 positionOS : TEXCOORD3;
+            half dent : TEXCOORD4;
             UNITY_VERTEX_INPUT_INSTANCE_ID
             UNITY_VERTEX_OUTPUT_STEREO
         };
@@ -59,17 +60,26 @@ Shader "SnowArena/FacetedSnowLit"
             // so the impact deforms one face while the silhouette keeps its size. Scaling the
             // whole transform (the old approach) read as the ball shrinking instead.
             float3 objectPosition = input.positionOS.xyz;
+            float3 objectNormal = input.normalOS;
+            half dent = 0;
             if (_ContactDepth > 0.0)
             {
                 float distanceToContact = distance(objectPosition, _ContactPoint.xyz);
                 float falloff = saturate(1.0 - distanceToContact / max(_ContactRadius, 0.0001));
-                objectPosition -= normalize(objectPosition) * (_ContactDepth * falloff * falloff);
+                float depth = _ContactDepth * falloff * falloff;
+                objectPosition -= normalize(objectPosition) * depth;
+                // Moving vertices alone is invisible: the lighting never changes because the
+                // normals do not. Tilting them toward the contact is what makes the dent read.
+                float3 towardContact = normalize(_ContactPoint.xyz - objectPosition);
+                objectNormal = normalize(lerp(objectNormal, towardContact, saturate(falloff * 1.15)));
+                dent = saturate(falloff * saturate(_ContactDepth * 3.5));
             }
             VertexPositionInputs position = GetVertexPositionInputs(objectPosition);
             output.positionCS = position.positionCS;
             output.positionWS = position.positionWS;
             output.positionOS = objectPosition;
-            output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+            output.dent = dent;
+            output.normalWS = TransformObjectToWorldNormal(objectNormal);
             output.color = input.color;
             output.fog = ComputeFogFactor(position.positionCS.z);
             return output;
@@ -100,7 +110,7 @@ Shader "SnowArena/FacetedSnowLit"
             float3 grainPosition = lerp(input.positionOS*4,input.positionWS,_GroundTracks);
             float grain = Noise(grainPosition.xz*27.0+grainPosition.y*3.4);
             float drift = Noise(grainPosition.xz*0.7+grainPosition.y)*0.6+Noise(grainPosition.xz*2.8)*0.4;
-            half3 albedo = input.color.rgb * _BaseColor.rgb;
+            half3 albedo = input.color.rgb * _BaseColor.rgb * (1.0 - input.dent * 0.4);
             albedo *= 1 + _SnowDetail * ((grain-0.5)*0.045+(drift-0.5)*0.07);
             if (_GroundTracks > 0.5 && normal.y > 0.8)
             {

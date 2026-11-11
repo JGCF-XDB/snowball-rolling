@@ -111,8 +111,12 @@ namespace SnowballArena
         {
             strength = Mathf.Clamp01(strength);
             AudioClip clip = library == null ? null : library.ImpactClip(strength);
-            if (clip == null) return;
-            Play(clip, point, Mathf.Lerp(0.06f, 0.22f, strength) * masterVolume, Random.Range(0.95f, 1.15f), true);
+            // Three quarters of the player's level: clearly present, still below a hit you caused.
+            if (clip != null)
+                Play(clip, point, Mathf.Lerp(0.25f, 0.95f, strength) * 0.75f * masterVolume, Random.Range(0.95f, 1.15f), true);
+            // Snow still puffs off a bot collision; camera shake and hit stop stay reserved for
+            // the player's own contacts.
+            Burst(point, strength * 0.7f);
         }
 
         public void UiClick() => Play(library == null ? null : library.click, Vector3.zero, 0.7f * masterVolume, 1f, false);
