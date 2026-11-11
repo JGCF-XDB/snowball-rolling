@@ -129,6 +129,30 @@ namespace SnowballArena.Editor
                 }
                 finally { UnityEngine.Object.DestroyImmediate(instance); }
             });
+            Check("Dent depth follows impact strength", () =>
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeBuilder.PrefabPath);
+                Require(prefab != null, "Missing snowball prefab");
+                float Measure(float strength)
+                {
+                    var copy = UnityEngine.Object.Instantiate(prefab);
+                    try
+                    {
+                        var body = copy.GetComponent<SnowballBody>();
+                        body.Initialize();
+                        var feedback = copy.GetComponent<SnowballFeedback>();
+                        Require(feedback != null, "Initialize did not add SnowballFeedback");
+                        feedback.ApplySquash(copy.transform.position + Vector3.right * body.Radius, strength);
+                        return feedback.SquashDepth;
+                    }
+                    finally { UnityEngine.Object.DestroyImmediate(copy); }
+                }
+                float light = Measure(0.35f);
+                float heavy = Measure(1f);
+                Require(light > 0f, "A light hit produced no dent at all");
+                Require(light < heavy * 0.5f, $"Light hit {light:F3} is not clearly below a heavy {heavy:F3}");
+                return $"light {light:F3} vs heavy {heavy:F3}";
+            });
             Check("Every ball gets the impact clamp component", () =>
             {
                 using var world = new World();

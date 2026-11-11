@@ -19,8 +19,14 @@ namespace SnowballArena
         [Min(1f)] public float squashStiffness = 130f;
         [Tooltip("Spring damping. Below critical damping leaves a visible rebound overshoot.")]
         [Min(0f)] public float squashDamping = 6f;
-        [Tooltip("Seconds the dent is held at full depth before the spring releases. Without this the deform is gone before the eye registers it.")]
+        [Tooltip("Seconds the hardest hit holds its dent before the spring releases.")]
         [Min(0f)] public float squashHoldSeconds = 0.35f;
+        [Tooltip("Share of squashHoldSeconds a barely-there nudge holds. Keeps light taps from looking as heavy as a ram.")]
+        [Range(0f, 1f)] public float lightHitHoldShare = 0.3f;
+        [Tooltip("Dent radius for the lightest hit, as a fraction of the ball's unit radius.")]
+        [Min(0.05f)] public float lightDentRadius = 0.26f;
+        [Tooltip("Dent radius for a full-speed hit.")]
+        [Min(0.05f)] public float heavyDentRadius = 0.78f;
 
         [Header("Rolling")]
         [Range(0f, 1f)] public float rollVolume = 0.2f;
@@ -40,6 +46,7 @@ namespace SnowballArena
         private float squash;
         private float squashVelocity;
         private float holdUntil;
+        private float impactStrength;
 
         private void Awake() => Initialize();
 
@@ -122,9 +129,12 @@ namespace SnowballArena
             if (ball.visual != null) contactLocal = ball.visual.InverseTransformPoint(contactPoint);
             // Depth follows impact strength: a light nudge barely deforms the snowball and
             // maximumSquash is reserved for a full-speed hit.
-            squash = Mathf.Max(squash, maximumSquash * Mathf.Pow(Mathf.Clamp01(strength), 1.5f));
+            // One strength value drives all three dimensions of the dent, so a ram and a nudge do
+            // not look the same: depth (below), footprint and how long it stays.
+            impactStrength = Mathf.Clamp01(strength);
+            squash = Mathf.Max(squash, maximumSquash * Mathf.Pow(impactStrength, 1.5f));
             squashVelocity = 0f;
-            holdUntil = Time.time + Mathf.Max(0f, squashHoldSeconds);
+            holdUntil = Time.time + Mathf.Lerp(squashHoldSeconds * lightHitHoldShare, squashHoldSeconds, impactStrength);
         }
 
         private void LateUpdate()
@@ -173,7 +183,7 @@ namespace SnowballArena
             target.GetPropertyBlock(dentProperties);
             dentProperties.SetVector("_ContactPoint", new Vector4(contactLocal.x, contactLocal.y, contactLocal.z, 0f));
             dentProperties.SetFloat("_ContactDepth", depth * 1.5f);
-            dentProperties.SetFloat("_ContactRadius", 0.68f);
+            dentProperties.SetFloat("_ContactRadius", Mathf.Lerp(lightDentRadius, heavyDentRadius, impactStrength));
             target.SetPropertyBlock(dentProperties);
         }
 
