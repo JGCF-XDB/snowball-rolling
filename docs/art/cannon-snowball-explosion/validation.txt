@@ -1,0 +1,6 @@
+PASS SnowPowder: puffs=88 chunks=34 lifetime=0.90s influence=7.02m colliders=0 deterministic=yes
+PASS IceShatter: puffs=84 chunks=56 lifetime=1.00s influence=6.24m colliders=0 deterministic=yes
+PASS AvalancheBlast: puffs=100 chunks=44 lifetime=1.05s influence=8.45m colliders=0 deterministic=yes
+PASS influence scales with ball radius: 4.08 m @0.85 m vs 11.52 m @2.40 m
+PASS ClearAll removes every live explosion
+Effect is visual-only: no colliders, no rigidbodies, no gameplay rule changes.

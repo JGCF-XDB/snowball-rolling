@@ -43,6 +43,20 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 
 ![01 方案正式对局场景预览，四颗雪球为摆放样本](docs/art/selected01/gameplay.png)
 
+## 大炮击中雪球爆炸动效（预览）
+
+炮弹命中雪球不再瞬间消失：新增纯视觉的雪球爆炸动效，按被击中雪球的当前半径缩放，含身份色闪光、雪雾、雪块/冰晶碎块、地面冲击环与光点，并按风格追加震屏（重手方案带 28 ms 顿帧）。三种风格共用同一效果类和同一时间盒（0–40 / 40–200 / 200–700 / 700–1050 ms），只切换参数预置：
+
+| 风格 | 表现 | 时长 |
+| --- | --- | --- |
+| A 雪雾爆裂 | 化成雪雾向外扩散后缓缓落下，最柔和、最省 | 0.90 s |
+| **B 冰晶碎裂（已选定 / 默认）** | 碎成冰晶与雪块沿冲击方向飞散，身份色参与 | 1.00 s |
+| C 雪崩冲击 | 定向锥形喷射 + 更大冲击环 + 更重镜头反馈 | 1.05 s |
+
+![选定 B 冰晶碎裂 Windows 包动效](docs/art/cannon-snowball-explosion/windows-runtime-b.gif)
+
+动效由显式时钟驱动，预览渲染与实机播放共用同一实现；可在 `CannonDirector` 的 Inspector 中通过 `snowballExplosionStyle` 切换。效果的视频、分镜、参数与验证结果见[雪球爆炸动效预览](docs/art/cannon-snowball-explosion/README.md)与[调研设计规格](docs/art/cannon-snowball-explosion/research.md)。
+
 ## 调参
 
 当前默认初始半径 **0.85 m**（体积约 2.57 m³、质量约 64.31 kg），初始驱动力 **3272.256 N**，初始地面线性阻力系数 **65**。玩家与机器人共用同一控制曲线：质量越大，加速度越小，但控制力会随质量适当增加，避免后期失去操作性。初始匀速平衡值约 50.34 m/s；这不是出生即获得的速度，也不是硬性限速。
@@ -236,4 +250,4 @@ CannonDirector 管理等待、预警、飞行状态，MatchController 在每个�
 
 参数位于 Scripts/Arena/CannonDirector.cs：startAfterSeconds、escalationInterval、flashHalfPeriod、projectileSpeed、projectileRadius。场景中的 MatchController 启动时自动挂载该组件。菜单 Snowball Arena > Build Cannon Game 可准备预警材质并打包；Resources/CannonSignal.mat 和 Resources/CannonWarning.mat 随项目保存，普通 Windows 打包入口同样可用。
 
-开发包支持 --cannon-smoke <输出目录>，包含炮台专项计时、三次预警、最近命中与单发单目标、高速相交、40/60 秒升级、多炮同时发射与独立命中、持续换位、胜负及清理检查，并输出预警和飞行画面（相机图不含 OnGUI）。其他对局验证把炮弹淘汰与自行落台分开统计。
+开发包支持 --cannon-smoke <输出目录>，包含炮台专项计时、三次预警、最近命中与单发单目标、高速相交、40/60 秒升级、多炮同时发射与独立命中、持续换位、胜负及清理检查；也检查默认 B 雪球爆炸的资源、着色器、一次命中一次爆炸、无碰撞体、菜单即时清理，以及终局一击持续播放后自动销毁。输出预警、飞行及雪球爆炸画面（相机图不含 OnGUI），追加 --cannon-motion 可导出 24 fps 的 120 帧 Windows 包动效序列。其他对局验证把炮弹淘汰与自行落台分开统计。
