@@ -3,315 +3,242 @@ using UnityEngine;
 
 namespace SnowballArena
 {
-    // Shared winter artwork for the menu, HUD and results. Textures are cached per size.
+    // Presentation only. MatchController still owns the page flow and all match rules.
     internal sealed class WinterMenuView : System.IDisposable
     {
+        public enum ResultAction { None, Restart, Menu }
+        private static readonly Color Ink = new Color(.19f, .37f, .53f);
+        private static readonly Color Outline = new Color(.34f, .50f, .66f);
+        private static readonly Color Snow = new Color(.99f, .997f, 1f, .97f);
         private readonly List<Texture2D> textures = new List<Texture2D>();
         private readonly Dictionary<Vector2Int, Texture2D> panels = new Dictionary<Vector2Int, Texture2D>();
-        private readonly Texture2D card, inset, snow;
-        private readonly GUIStyle brand, title, subtitle, caption, count, hint, noticeStyle, stepButton, startButton;
-        private static readonly Color Ink = new Color(0.10f, 0.25f, 0.34f);
-        private readonly GUIStyle logo, lessonText;
-        private readonly GUIStyle homeLead, homeSubtitle, keyHint;
+        private readonly Texture2D wordmark, keycap;
         private readonly Texture2D[] lessons;
-        private readonly Texture2D glassBackground;
-        public GUIStyle HudHeading { get; }
-        public GUIStyle HudSmall { get; }
-        public GUIStyle Hazard { get; }
-        public GUIStyle Countdown { get; }
-        public GUIStyle ResultTitle => title;
-        public GUIStyle PrimaryButton => startButton;
-        public GUIStyle SecondaryButton { get; }
+        private readonly HandwrittenTextAtlas lettering;
+        private readonly GUIStyle heading, lead, subtitle, caption, number, numberCaption, hint, noticeStyle;
+        private readonly GUIStyle primary, secondary, primaryText, secondaryText, step, keyText, lessonText, countdown;
 
         public WinterMenuView(Font font)
         {
-            card = Surface(520, 448, 26, new Color(0.96f, 0.99f, 1f), new Color(0.74f, 0.87f, 0.94f), true);
-            inset = Surface(64, 64, 12, new Color(0.76f, 0.87f, 0.93f), new Color(0.88f, 0.95f, 0.98f));
-            snow = Surface(32, 32, 16, Color.white, Color.white);
-            brand = Text(font, 17, FontStyle.Bold, new Color(0.27f, 0.46f, 0.56f));
-            title = Text(font, 38, FontStyle.Bold, Ink);
-            subtitle = Text(font, 21, FontStyle.Normal, new Color(0.25f, 0.43f, 0.53f));
-            caption = Text(font, 16, FontStyle.Normal, new Color(0.30f, 0.47f, 0.57f));
-            count = Text(font, 25, FontStyle.Bold, Ink);
-            hint = Text(font, 14, FontStyle.Normal, new Color(0.29f, 0.45f, 0.54f));
-            noticeStyle = Text(font, 14, FontStyle.Bold, new Color(0.62f, 0.22f, 0.12f));
+            lettering = new HandwrittenTextAtlas();
+            wordmark = Resources.Load<Texture2D>("UI/GameTitle");
+            lessons = new[] { Resources.Load<Texture2D>("Tutorial/Movement"),
+                Resources.Load<Texture2D>("Tutorial/Cannon"), Resources.Load<Texture2D>("Tutorial/Victory") };
+            heading = Text(font, 57, FontStyle.Bold, Color.white);
+            lead = Text(font, 27, FontStyle.Bold, Ink);
+            subtitle = Text(font, 23, FontStyle.Normal, Ink);
+            caption = Text(font, 22, FontStyle.Bold, Ink);
+            number = Text(font, 92, FontStyle.Bold, Ink);
+            numberCaption = Text(font, 24, FontStyle.Bold, Ink);
+            hint = Text(font, 19, FontStyle.Normal, Ink);
+            noticeStyle = Text(font, 20, FontStyle.Bold, new Color(.68f, .25f, .18f));
             noticeStyle.wordWrap = true;
-            stepButton = Button(font, 27, false);
-            startButton = Button(font, 23, true);
-            SecondaryButton = Button(font, 20, false);
-            HudHeading = Text(font, 28, FontStyle.Bold, Ink);
-            HudHeading.alignment = TextAnchor.MiddleLeft;
-            HudSmall = Text(font, 16, FontStyle.Normal, new Color(0.22f, 0.39f, 0.49f));
-            HudSmall.alignment = TextAnchor.MiddleLeft;
-            Hazard = Text(font, 22, FontStyle.Bold, new Color(0.61f, 0.20f, 0.07f));
-            Countdown = Text(font, 64, FontStyle.Bold, new Color(0.61f, 0.20f, 0.07f));
-            logo = Text(font, 52, FontStyle.BoldAndItalic, Color.white);
-            logo.clipping = TextClipping.Overflow;
-            homeLead = Text(font, 28, FontStyle.Bold, Ink);
-            homeSubtitle = Text(font, 18, FontStyle.Normal, new Color(0.28f, 0.45f, 0.54f));
-            keyHint = Text(font, 13, FontStyle.Bold, new Color(0.90f, 0.97f, 1f));
-            lessonText = Text(font, 20, FontStyle.Bold, Ink);
+            keyText = Text(font, 20, FontStyle.Bold, Outline);
+            lessonText = Text(font, 27, FontStyle.Bold, Ink);
             lessonText.wordWrap = true;
-            lessons = new[] { Resources.Load<Texture2D>("Tutorial/Movement"), Resources.Load<Texture2D>("Tutorial/Cannon"), Resources.Load<Texture2D>("Tutorial/Victory") };
-            glassBackground = Resources.Load<Texture2D>("Tutorial/Glass");
-        }
-
-        public void Panel(Rect rect, bool decorate = true)
-        {
-            var size = new Vector2Int(Mathf.RoundToInt(rect.width), Mathf.RoundToInt(rect.height));
-            if (!panels.TryGetValue(size, out var texture))
-            {
-                texture = Surface(size.x, size.y, Mathf.Min(22, rect.height / 3),
-                    new Color(0.96f, 0.99f, 1f), new Color(0.74f, 0.87f, 0.94f), true);
-                panels.Add(size, texture);
-            }
-            TintTexture(new Rect(rect.x + 2, rect.y + 5, rect.width, rect.height), texture, new Color(0.03f, 0.13f, 0.22f, 0.24f));
-            GUI.DrawTexture(rect, texture);
-            if (!decorate) return;
-            TintTexture(new Rect(rect.x + 24, rect.y - 3, 63, 8), snow, Color.white);
-            TintTexture(new Rect(rect.x + 39, rect.y - 5, 28, 10), snow, Color.white);
-            Snowflake(new Vector2(rect.xMax - 18, rect.y + 19), 8, new Color(0.41f, 0.65f, 0.77f, 0.48f));
-        }
-
-        public void DimBackground(float width, float height)
-        {
-            Fill(new Rect(0, 0, width, height), new Color(0.06f, 0.20f, 0.30f, 0.32f));
+            countdown = Text(font, 124, FontStyle.Bold, Color.white);
+            primary = Button(font, 34);
+            secondary = Button(font, 26);
+            primaryText = Text(font, 34, FontStyle.Bold, Ink);
+            secondaryText = Text(font, 26, FontStyle.Bold, Ink);
+            step = Button(font, 44);
+            keycap = Surface(64, 40, 13, new Color(.82f, .88f, .95f), false);
         }
 
         public bool Draw(float width, float height, ref int bots, string notice, MenuPage page)
         {
             if (page == MenuPage.Tutorial) return DrawTutorial(width, height);
-            Color oldColor = GUI.color;
-            bool oldEnabled = GUI.enabled;
-            GUI.color = Color.white;
-            Fill(new Rect(0, 0, width, height), new Color(0.06f, 0.20f, 0.30f, 0.32f));
-            // Quiet frost at the edges leaves the mountain scene visible.
-            for (int i = 0; i < 18; i++)
-            {
-                float alpha = (1f - i / 18f) * 0.014f;
-                Fill(new Rect(i * 3, 0, 3, height), new Color(0.81f, 0.94f, 1f, alpha * 8));
-                Fill(new Rect(width - i * 3 - 3, 0, 3, height), new Color(0.81f, 0.94f, 1f, alpha * 8));
-                Fill(new Rect(0, i * 3, width, 3), new Color(0.81f, 0.94f, 1f, alpha * 8));
-                Fill(new Rect(0, height - i * 3 - 3, width, 3), new Color(0.81f, 0.94f, 1f, alpha * 8));
-            }
-            Border(new Rect(22, 22, width - 44, height - 44), new Color(0.88f, 0.97f, 1f, 0.45f));
-            Snowflake(new Vector2(44, 44), 13, new Color(0.92f, 0.98f, 1f, 0.85f));
-            Snowflake(new Vector2(width - 44, height - 44), 13, new Color(0.92f, 0.98f, 1f, 0.85f));
-            for (int i = 0; i < 26; i++)
-            {
-                float x = Mathf.Repeat(i * 137.7f + Mathf.Sin(Time.unscaledTime * 0.24f + i) * 16, width);
-                float y = Mathf.Repeat(i * 73.3f + Time.unscaledTime * (7 + i % 5), height);
-                float size = 2 + i % 4;
-                TintTexture(new Rect(x, y, size, size), snow, new Color(1, 1, 1, 0.26f + i % 3 * 0.12f));
-            }
-
-            var r = new Rect((width - 520) / 2, (height - 448) / 2, 520, 448);
-            TintTexture(new Rect(r.x - 5, r.y + 9, r.width + 10, r.height + 10), card, new Color(0.03f, 0.13f, 0.22f, 0.24f));
-            GUI.DrawTexture(r, card);
-            // Small snow pillows sit on the rim rather than behind the copy.
-            TintTexture(new Rect(r.x + 32, r.y - 5, 104, 13), snow, new Color(0.97f, 1f, 1f));
-            TintTexture(new Rect(r.x + 55, r.y - 9, 43, 18), snow, Color.white);
-            TintTexture(new Rect(r.xMax - 114, r.y - 4, 67, 11), snow, Color.white);
-            Snowflake(new Vector2(r.x + 33, r.y + 50), 15, new Color(0.47f, 0.69f, 0.80f, 0.75f));
-            Snowflake(new Vector2(r.xMax - 36, r.yMax - 40), 18, new Color(0.41f, 0.65f, 0.77f, 0.45f));
-            if (page == MenuPage.Home)
-            {
-                DrawSummit(new Vector2(r.center.x, r.y + 45));
-                DrawLogo(new Rect(r.x + 24, r.y + 76, 472, 78));
-                Color accent = new Color(0.41f, 0.65f, 0.76f, 0.5f);
-                Fill(new Rect(r.center.x - 106, r.y + 174, 86, 1), accent);
-                Fill(new Rect(r.center.x + 20, r.y + 174, 86, 1), accent);
-                Snowflake(new Vector2(r.center.x, r.y + 174), 8, accent);
-                GUI.Label(new Rect(r.x + 24, r.y + 202, 472, 42), "尽情地碰撞吧！", homeLead);
-                GUI.Label(new Rect(r.x + 24, r.y + 247, 472, 32), "小心周围召唤的炮弹~", homeSubtitle);
-                var playRect = new Rect(r.x + 60, r.y + 315, 400, 60);
-                TintTexture(new Rect(playRect.x, playRect.y + 5, playRect.width, playRect.height),
-                    startButton.normal.background, new Color(0.06f, 0.22f, 0.32f, 0.26f));
-                bool next = GUI.Button(playRect, "开始游戏", startButton);
-                // The shortcut is a quiet keycap inside the primary action.
-                var keyRect = new Rect(playRect.xMax - 66, playRect.y + 19, 48, 23);
-                Border(keyRect, new Color(0.83f, 0.94f, 1f, 0.40f));
-                GUI.Label(keyRect, "Enter", keyHint);
-                GUI.Label(new Rect(r.x + 30, r.y + 394, 460, 28), "滚动成长  ·  碰撞求生", hint);
-                GUI.color = oldColor;
-                GUI.enabled = oldEnabled;
-                return next;
-            }
-            GUI.Label(new Rect(r.x + 60, r.y + 31, 400, 30), "留在雪山之巅", brand);
-            GUI.Label(new Rect(r.x + 24, r.y + 82, 472, 58), "选择你的对手", title);
-            GUI.Label(new Rect(r.x + 24, r.y + 143, 472, 36), "准备好，向雪山之巅出发！", subtitle);
-            Fill(new Rect(r.x + 100, r.y + 200, 320, 1), new Color(0.47f, 0.67f, 0.77f, 0.38f));
-            GUI.Label(new Rect(r.x + 40, r.y + 214, 440, 25), "机器人数量", caption);
-            GUI.DrawTexture(new Rect(r.x + 104, r.y + 249, 312, 55), inset);
-            GUI.enabled = oldEnabled && bots > 0;
-            if (GUI.Button(new Rect(r.x + 40, r.y + 249, 54, 55), "−", stepButton)) bots--;
-            GUI.enabled = oldEnabled;
-            GUI.Label(new Rect(r.x + 108, r.y + 250, 304, 52), bots == 0 ? "自由练习" : bots + "  位对手", count);
-            GUI.enabled = oldEnabled && bots < 15;
-            if (GUI.Button(new Rect(r.xMax - 94, r.y + 249, 54, 55), "+", stepButton)) bots++;
-            GUI.enabled = oldEnabled;
-            bool start = GUI.Button(new Rect(r.x + 40, r.y + 326, 440, 58), bots == 0 ? "开始练习   ·   Enter" : "开始对局   ·   Enter", startButton);
-            GUI.Label(new Rect(r.x + 30, r.y + 397, 460, 35), notice ?? "← → 调整人数    WASD 控制红色描边雪球", notice == null ? hint : noticeStyle);
-            GUI.color = oldColor;
-            GUI.enabled = oldEnabled;
-            return start;
-        }
-
-        private void DrawLogo(Rect rect)
-        {
-            // Ice-carved lettering: extruded sides, dark rim and a snow-to-ice face.
             Color old = GUI.color;
-            for (int depth = 7; depth >= 1; depth--)
-            {
-                GUI.color = Color.Lerp(new Color(0.08f, 0.21f, 0.34f), new Color(0.23f, 0.49f, 0.66f), 1f - depth / 7f);
-                GUI.Label(new Rect(rect.x + depth * 0.4f, rect.y + depth, rect.width, rect.height), "留在雪山之巅", logo);
-            }
-            GUI.color = new Color(0.12f, 0.35f, 0.51f);
-            for (int x = -1; x <= 1; x++)
-            for (int y = -1; y <= 1; y++)
-                if (x != 0 || y != 0)
-                    GUI.Label(new Rect(rect.x + x * 3, rect.y + y * 3, rect.width, rect.height), "留在雪山之巅", logo);
-            // Clipped bands tint only the glyphs, without a rectangular background.
-            const int bands = 16;
-            for (int band = 0; band < bands; band++)
-            {
-                float y = rect.height * band / bands;
-                float t = Mathf.InverseLerp(0.32f, 0.85f, (band + .5f) / bands);
-                GUI.color = Color.Lerp(Color.white, new Color(0.39f, 0.77f, 0.94f), t);
-                GUI.BeginGroup(new Rect(rect.x, rect.y + y, rect.width, rect.height / bands));
-                GUI.Label(new Rect(0, -y, rect.width, rect.height), "留在雪山之巅", logo);
-                GUI.EndGroup();
-            }
+            GUI.color = Color.white;
+            bool result = page == MenuPage.Home ? DrawHome(width, height) : DrawOpponents(width, height, ref bots, notice);
             GUI.color = old;
-            Color glint = new Color(0.98f, 1f, 1f, 0.95f);
-            Snowflake(new Vector2(rect.center.x - 168, rect.center.y - 21), 8, glint);
-            Snowflake(new Vector2(rect.center.x + 162, rect.center.y + 12), 6, glint);
+            return result;
         }
 
-        private static void DrawSummit(Vector2 center)
+        private bool DrawHome(float width, float height)
         {
-            Color blue = new Color(0.36f, 0.58f, 0.70f, 0.75f);
-            var peak = center + new Vector2(0, -14);
-            Line(center + new Vector2(-31, 13), peak, blue);
-            Line(peak, center + new Vector2(27, 13), blue);
-            Line(center + new Vector2(-47, 13), center + new Vector2(-27, -5), blue);
-            Line(center + new Vector2(-27, -5), center + new Vector2(-17, 2), blue);
-            Line(center + new Vector2(16, 2), center + new Vector2(29, -7), blue);
-            Line(center + new Vector2(29, -7), center + new Vector2(46, 13), blue);
-            Line(center + new Vector2(-10, -5), center + new Vector2(-3, 1), blue);
-            Line(center + new Vector2(-3, 1), center + new Vector2(3, -3), blue);
-            Line(center + new Vector2(3, -3), center + new Vector2(9, -5), blue);
+            float center = width / 2, top = (height - 390) / 2;
+            var logoRect = new Rect(center - 300, top + 8, 600, 141.3f);
+            if (wordmark != null)
+            {
+                // Visible ink bounds of the unmodified transparent source, excluding its safety margin.
+                var uv = new Rect(110f / 2172f, 138f / 724f, 1945f / 2172f, 458f / 724f);
+                GUI.DrawTextureWithTexCoords(logoRect, wordmark, uv, true);
+            }
+            else Outlined(logoRect, MatchController.GameTitle, heading, 2f);
+            ArtLabel(new Rect(center - 380, top + 174, 760, 40), "尽情地碰撞吧！", lead, 29);
+            ArtLabel(new Rect(center - 400, top + 218, 800, 36), "小心周围召唤的炮弹~", subtitle, 25);
+            return ActionButton(new Rect(center - 180, top + 282, 360, 82), "开始游戏", "Enter");
+        }
+
+        private bool DrawOpponents(float width, float height, ref int bots, string notice)
+        {
+            float center = width / 2, top = (height - 500) / 2;
+            lettering.Draw(new Rect(center - 400, top, 800, 90), "选择你的对手", 86);
+            ArtLabel(new Rect(center - 400, top + 94, 800, 36), "准备好，向雪山之巅出发！", subtitle, 26);
+            ArtLabel(new Rect(center - 200, top + 154, 400, 32), "机器人数量", caption, 27);
+            bool oldEnabled = GUI.enabled;
+            GUI.enabled = oldEnabled && bots > 0;
+            var minusRect = new Rect(center - 157, top + 208, 68, 68);
+            if (GUI.Button(minusRect, GUIContent.none, step)) bots--;
+            lettering.Draw(new Rect(minusRect.x + 18, minusRect.y + 18, 32, 32), "−", 22);
+            GUI.enabled = oldEnabled && bots < 15;
+            var plusRect = new Rect(center + 89, top + 208, 68, 68);
+            if (GUI.Button(plusRect, GUIContent.none, step)) bots++;
+            lettering.Draw(plusRect, "+", 32);
+            GUI.enabled = oldEnabled;
+            lettering.Number(new Rect(center - 80, top + 190, 160, 105), bots, false, 91);
+            ArtLabel(new Rect(center - 160, top + 292, 320, 38), bots == 0 ? "自由练习" : "位对手", numberCaption, 27);
+            bool start = ActionButton(new Rect(center - 190, top + 348, 380, 82), bots == 0 ? "开始练习" : "现在开始吧！", "Enter");
+            ArtLabel(new Rect(center - 450, top + 444, 900, 54),
+                notice ?? "← → 调整人数 · 0 人为自由练习", notice == null ? hint : noticeStyle, 20);
+            EscapeHint(height);
+            return start;
         }
 
         private bool DrawTutorial(float width, float height)
         {
-            if (glassBackground != null)
-                GUI.DrawTexture(new Rect(0, 0, width, height), glassBackground, ScaleMode.ScaleAndCrop);
-            Fill(new Rect(0, 0, width, height), new Color(0.80f, 0.92f, 0.98f, 0.48f));
-            Border(new Rect(22, 22, width - 44, height - 44), new Color(1, 1, 1, 0.65f));
-            float left = (width - 1152) / 2, top = (height - 460) / 2;
-            GUI.Label(new Rect(left, top, 1152, 58), "雪山生存指南", title);
-            string[] descriptions = { "WASD控制红色描边雪球的方向", "注意躲避外侧袭来的炮弹！", "最后留在场上的雪球获得胜利！" };
-            for (int i = 0; i < 3; i++)
+            Fill(new Rect(0, 0, width, height), new Color(.91f, .96f, 1f, .66f));
+            float top = (height - 600) / 2;
+            lettering.Draw(new Rect(width / 2 - 440, top + 8, 880, 110), "雪山生存指南", 100);
+            const float cardWidth = 350, gap = 20;
+            float left = (width - cardWidth * 3 - gap * 2) / 2;
+            string[] copy = { "WASD 控制\n雪球方向", "注意躲避外侧\n袭来的炮弹！", "最后留在场上的\n雪球获得胜利！" };
+            for (int i = 0; i < lessons.Length; i++)
             {
-                var panel = new Rect(left + i * 392, top + 92, 368, 282);
+                var panel = new Rect(left + i * (cardWidth + gap), top + 190, cardWidth, 318);
                 Panel(panel);
                 if (lessons[i] != null)
-                    GUI.DrawTexture(new Rect(panel.x + 14, panel.y + 14, 340, 191.25f), lessons[i], ScaleMode.ScaleToFit);
-                GUI.Label(new Rect(panel.x + 19, panel.y + 215, 330, 52), descriptions[i], lessonText);
+                    GUI.DrawTexture(new Rect(panel.x + 19, panel.y + 23, 312, 175.5f), lessons[i], ScaleMode.ScaleToFit);
+                ArtLabel(new Rect(panel.x + 16, panel.y + 208, 318, 88), copy[i], lessonText, 82);
+                var badge = new Rect(panel.x + 8, panel.y - 18, 56, 48);
+                Panel(badge);
+                lettering.Number(badge, i + 1, false, 28);
             }
-            GUI.Label(new Rect(left, top + 405, 1152, 40), "点击任意处继续  ·  Enter", subtitle);
-            // Handle release so the click that opened this page cannot skip it.
-            if (Event.current.type == EventType.MouseUp)
+            ArtLabel(new Rect(width / 2 - 370, top + 558, 740, 44), "点击任意处继续 · Enter", lead, 29);
+            EscapeHint(height);
+            // Consume a release, as before, so the opening click cannot skip the tutorial.
+            if (Event.current.type != EventType.MouseUp) return false;
+            Event.current.Use();
+            return true;
+        }
+
+        public void DrawCountdown(float width, float height, float remaining)
+        {
+            lettering.Number(new Rect(width / 2 - 140, height / 2 - 100, 280, 200),
+                Mathf.CeilToInt(remaining), true, 142);
+        }
+
+        public ResultAction DrawResults(float width, float height, string result)
+        {
+            Fill(new Rect(0, 0, width, height), new Color(.05f, .16f, .25f, .20f));
+            float center = width / 2, top = height / 2 - 154;
+            var titleRect = new Rect(center - 440, top, 880, 110);
+            if (!lettering.Winner(titleRect, result)) lettering.Draw(titleRect, result, 88);
+            if (ActionButton(new Rect(center - 180, top + 132, 360, 78), "再来一局", "R")) return ResultAction.Restart;
+            if (ActionButton(new Rect(center - 154, top + 226, 308, 64), "返回菜单", "Esc", true)) return ResultAction.Menu;
+            return ResultAction.None;
+        }
+
+        private bool ActionButton(Rect rect, string label, string shortcut, bool quiet = false)
+        {
+            GUIStyle style = quiet ? secondary : primary;
+            bool clicked = GUI.Button(rect, GUIContent.none, style);
+            ArtLabel(new Rect(rect.x + 16, rect.y + 2, rect.width - 112, rect.height - 4), label,
+                quiet ? secondaryText : primaryText, quiet ? 32 : 42);
+            var keyRect = new Rect(rect.xMax - 96, rect.center.y - 20, 76, 40);
+            GUI.DrawTexture(keyRect, keycap);
+            ArtLabel(new Rect(keyRect.x + 8, keyRect.y + 7, keyRect.width - 16, keyRect.height - 14), shortcut, keyText, 23);
+            return clicked;
+        }
+
+        private void EscapeHint(float height)
+        {
+            ArtLabel(new Rect(28, height - 49, 240, 32), "Esc 返回首页", hint, 21);
+        }
+
+        private void ArtLabel(Rect rect, string value, GUIStyle fallback, float height)
+        {
+            if (!lettering.Draw(rect, value, height)) GUI.Label(rect, value, fallback);
+        }
+
+        private void Panel(Rect rect)
+        {
+            var size = new Vector2Int(Mathf.RoundToInt(rect.width), Mathf.RoundToInt(rect.height));
+            if (!panels.TryGetValue(size, out var texture))
             {
-                Event.current.Use();
-                return true;
+                texture = Surface(size.x, size.y, Mathf.Min(27, rect.height * .43f), Snow, true);
+                panels.Add(size, texture);
             }
-            return false;
+            GUI.DrawTexture(rect, texture);
         }
 
         private static GUIStyle Text(Font font, int size, FontStyle weight, Color color)
         {
-            var style = new GUIStyle(GUI.skin.label) { font = font, fontSize = size, fontStyle = weight, alignment = TextAnchor.MiddleCenter };
+            var style = new GUIStyle(GUI.skin.label) { font = font, fontSize = size, fontStyle = weight,
+                alignment = TextAnchor.MiddleCenter, clipping = TextClipping.Clip, richText = false };
             style.normal.textColor = color;
             return style;
         }
 
-        private GUIStyle Button(Font font, int size, bool primary)
+        private GUIStyle Button(Font font, int size)
         {
-            var style = new GUIStyle(GUI.skin.button)
-            {
-                font = font, fontSize = size, fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter, border = new RectOffset(15, 15, 15, 15),
-                padding = new RectOffset(8, 8, 2, 2)
-            };
-            Color top = primary ? new Color(0.22f, 0.51f, 0.66f) : new Color(0.98f, 1f, 1f);
-            Color bottom = primary ? new Color(0.10f, 0.33f, 0.48f) : new Color(0.74f, 0.87f, 0.94f);
-            style.normal.background = Surface(64, 64, 12, top, bottom);
-            style.hover.background = Surface(64, 64, 12, Color.Lerp(top, Color.white, 0.14f), Color.Lerp(bottom, Color.white, 0.14f));
-            style.active.background = Surface(64, 64, 12, bottom, top);
+            var style = Text(font, size, FontStyle.Bold, Ink);
+            style.border = new RectOffset(18, 18, 18, 18);
+            style.normal.background = Surface(72, 72, 18, Snow, true);
+            style.hover.background = Surface(72, 72, 18, new Color(.92f, .97f, 1f), true);
+            style.active.background = Surface(72, 72, 18, new Color(.83f, .91f, .98f), true);
             style.focused.background = style.hover.background;
-            style.normal.textColor = style.hover.textColor = style.active.textColor = style.focused.textColor = primary ? Color.white : Ink;
+            style.hover.textColor = style.active.textColor = style.focused.textColor = Ink;
             return style;
         }
 
-        private Texture2D Surface(int width, int height, float radius, Color top, Color bottom, bool frost = false)
+        private static void Outlined(Rect rect, string value, GUIStyle style, float stroke)
         {
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false) { name = "Winter menu surface", hideFlags = HideFlags.HideAndDontSave, wrapMode = TextureWrapMode.Clamp };
+            Color old = style.normal.textColor;
+            style.normal.textColor = Outline;
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = i * Mathf.PI / 4;
+                var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * stroke;
+                GUI.Label(new Rect(rect.position + offset, rect.size), value, style);
+            }
+            style.normal.textColor = Color.white;
+            GUI.Label(rect, value, style);
+            style.normal.textColor = old;
+        }
+
+        private Texture2D Surface(int width, int height, float radius, Color fill, bool outlined)
+        {
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            { name = "Handwritten UI surface", hideFlags = HideFlags.HideAndDontSave, wrapMode = TextureWrapMode.Clamp };
             var pixels = new Color[width * height];
             for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
-                float dx = Mathf.Abs(x + 0.5f - width / 2f) - (width / 2f - radius);
-                float dy = Mathf.Abs(y + 0.5f - height / 2f) - (height / 2f - radius);
-                float distance = new Vector2(Mathf.Max(dx, 0), Mathf.Max(dy, 0)).magnitude + Mathf.Min(Mathf.Max(dx, dy), 0) - radius;
-                Color color = Color.Lerp(bottom, top, y / (height - 1f));
-                if (frost)
-                {
-                    float grain = ((x * 17 + y * 131 + x * y * 3) % 31) / 30f - 0.5f;
-                    color += new Color(grain * 0.018f, grain * 0.018f, grain * 0.018f, 0);
-                    if (distance > -3) color = new Color(0.97f, 1f, 1f);
-                    else if (distance > -5) color = new Color(0.51f, 0.73f, 0.84f);
-                    else if (distance < -10 && distance > -11.5f) color = new Color(0.97f, 1f, 1f, 0.95f);
-                }
-                else if (distance > -1.5f) color = Color.Lerp(color, Color.white, 0.35f);
-                color.a *= Mathf.Clamp01(0.5f - distance);
+                float dx = Mathf.Abs(x + .5f - width / 2f) - (width / 2f - radius - 2);
+                float dy = Mathf.Abs(y + .5f - height / 2f) - (height / 2f - radius - 2);
+                float distance = new Vector2(Mathf.Max(dx, 0), Mathf.Max(dy, 0)).magnitude
+                    + Mathf.Min(Mathf.Max(dx, dy), 0) - radius;
+                if (outlined) distance += Mathf.Sin(x * .054f + .6f) * .45f + Mathf.Sin(y * .063f) * .45f;
+                var color = outlined ? Color.Lerp(fill, Outline, Mathf.Clamp01(distance + 2.2f)) : fill;
+                color.a *= Mathf.Clamp01(.5f - distance);
                 pixels[y * width + x] = color;
             }
-            texture.SetPixels(pixels); texture.Apply(false, true); textures.Add(texture);
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            textures.Add(texture);
             return texture;
         }
 
-        private static void Fill(Rect rect, Color color) { TintTexture(rect, Texture2D.whiteTexture, color); }
-        private static void TintTexture(Rect rect, Texture2D texture, Color color)
+        private static void Fill(Rect rect, Color color)
         {
-            Color previous = GUI.color; GUI.color = color; GUI.DrawTexture(rect, texture); GUI.color = previous;
+            Color old = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = old;
         }
-        private static void Border(Rect r, Color color)
-        {
-            Fill(new Rect(r.x, r.y, r.width, 1), color); Fill(new Rect(r.x, r.yMax - 1, r.width, 1), color);
-            Fill(new Rect(r.x, r.y, 1, r.height), color); Fill(new Rect(r.xMax - 1, r.y, 1, r.height), color);
-        }
-        private static void Line(Vector2 from, Vector2 to, Color color)
-        {
-            Matrix4x4 previous = GUI.matrix;
-            GUIUtility.RotateAroundPivot(Mathf.Atan2(to.y - from.y, to.x - from.x) * Mathf.Rad2Deg, from);
-            Fill(new Rect(from.x, from.y - 0.7f, Vector2.Distance(from, to), 1.4f), color);
-            GUI.matrix = previous;
-        }
-        private static void Snowflake(Vector2 center, float radius, Color color)
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                float angle = i * Mathf.PI / 3;
-                var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-                var side = new Vector2(-direction.y, direction.x);
-                Line(center, center + direction * radius, color);
-                Vector2 joint = center + direction * radius * 0.62f;
-                Line(joint, joint - direction * radius * 0.23f + side * radius * 0.23f, color);
-                Line(joint, joint - direction * radius * 0.23f - side * radius * 0.23f, color);
-            }
-        }
+
         public void Dispose()
         {
             foreach (var texture in textures) Object.Destroy(texture);

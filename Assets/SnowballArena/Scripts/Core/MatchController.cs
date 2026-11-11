@@ -20,6 +20,7 @@ namespace SnowballArena
 
     public sealed class MatchController : MonoBehaviour
     {
+        public const string GameTitle = "决战雪山之巅";
         public GameObject snowballPrefab;
         public ArenaSurface surface;
         public Camera arenaCamera;
@@ -42,6 +43,7 @@ namespace SnowballArena
         private int lastCountdownSecond = -1;
         private float victoryUntil;
         private Font font;
+        private bool ownsFont;
         private WinterMenuView winterMenu;
         private void Awake()
         {
@@ -235,7 +237,12 @@ namespace SnowballArena
         {
             if (winterMenu == null)
             {
-                font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "Segoe UI" }, 24);
+                font = Resources.Load<Font>("UI/LXGWMarkerGothic-Regular");
+                if (font == null)
+                {
+                    font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "Segoe UI" }, 24);
+                    ownsFont = true;
+                }
                 winterMenu = new WinterMenuView(font);
             }
             Matrix4x4 previous = GUI.matrix;
@@ -253,17 +260,13 @@ namespace SnowballArena
             {
                 if (Phase == MatchPhase.Countdown)
                 {
-                    winterMenu.Panel(new Rect(w / 2 - 68, h / 2 - 68, 136, 136));
-                    GUI.Label(new Rect(w / 2 - 54, h / 2 - 54, 108, 108), Mathf.CeilToInt(Countdown).ToString(), winterMenu.Countdown);
+                    winterMenu.DrawCountdown(w, h, Countdown);
                 }
                 if (Phase == MatchPhase.Results)
                 {
-                    winterMenu.DimBackground(w, h);
-                    var r = new Rect(w / 2 - 240, h / 2 - 140, 480, 280);
-                    winterMenu.Panel(r);
-                    GUI.Label(new Rect(r.x + 30, r.y + 29, 420, 66), Result, winterMenu.ResultTitle);
-                    if (GUI.Button(new Rect(r.x + 36, r.y + 121, 408, 56), "再来一局  ·  R", winterMenu.PrimaryButton)) StartMatch(botCount);
-                    if (GUI.Button(new Rect(r.x + 36, r.y + 193, 408, 52), "返回菜单  ·  Esc", winterMenu.SecondaryButton)) ReturnToMenu();
+                    var action = winterMenu.DrawResults(w, h, Result);
+                    if (action == WinterMenuView.ResultAction.Restart) StartMatch(botCount);
+                    else if (action == WinterMenuView.ResultAction.Menu) ReturnToMenu();
                 }
             }
             GUI.matrix = previous;
@@ -272,7 +275,7 @@ namespace SnowballArena
         private void OnDestroy()
         {
             winterMenu?.Dispose();
-            if (font != null) Destroy(font);
+            if (ownsFont && font != null) Destroy(font);
         }
     }
 }

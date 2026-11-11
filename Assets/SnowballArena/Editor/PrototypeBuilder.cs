@@ -144,7 +144,7 @@ namespace SnowballArena.Editor
             timeSettings.FindProperty("Maximum Allowed Timestep").floatValue = 0.1f;
             timeSettings.ApplyModifiedProperties();
             PlayerSettings.companyName = "Snowball Arena";
-            PlayerSettings.productName = "Snowball Arena Prototype";
+            PlayerSettings.productName = MatchController.GameTitle;
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
