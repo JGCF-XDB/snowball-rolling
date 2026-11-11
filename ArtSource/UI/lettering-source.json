@@ -1,0 +1,113 @@
+{
+  "generator": "Built-in image_gen.imagegen",
+  "transparent_background": true,
+  "reference": "ApprovedHandletteredStyle.png",
+  "sheets": [
+    {
+      "key": "ui-art-headers",
+      "file": "Headers",
+      "cols": 2,
+      "rows": 4,
+      "keys": [
+        "雪山生存指南",
+        "选择你的对手",
+        "你赢了！",
+        "平局",
+        "练习结束",
+        "雪球",
+        "获胜",
+        "决战雪山之巅"
+      ],
+      "prompt": "Create a production-ready TRANSPARENT PNG GAME LETTERING ATLAS. This is a sprite asset sheet, not a UI screenshot, poster, page, or font specimen. Reference images show the exact APPROVED Chinese snowball game art style. The user rejects formal typefaces and requires EVERY UI word to be custom drawn in the same character as the reference: rounded and friendly thick felt-tip strokes, naturally varied outlines, lively small baseline irregularities, simple readable Chinese, like the captions/buttons in the reference. No squared generic Heiti, no Songti, no thin strokes, no standard typography, no sports italics, no texture or 3D.\nPure transparent background across the canvas, including all gutters. Only the requested lettering is visible. No white paper, black background, grid lines, cell borders, buttons, labels, row numbers, headings or ornaments. ALL ink is contained in the cell interiors with at least 15% clear transparent padding at every cell edge; never cross a grid boundary. Equal cell widths/heights. Center each requested item in its assigned cell. Include every Chinese character and punctuation exactly once as specified. Do not abbreviate, repeat, skip, or change the text. Match the reference's rounded stroke and organic shape, not a font substitute. Use the same visual size for glyph heights across comparable items, adapting size only for longer phrases to fit safely.\nLayout: 2 columns and 4 equal rows, 2048x2048 or higher. White filled chunky ORIGINAL hand-lettered Chinese, with only a slim muted mountain-blue outline (#5B82A6), matching the reference's large bubbly page headings. Opaque white inside the lettering, transparent outside and in counters. Not a drop shadow. Each item on ONE line. Exact cell contents, row by row left to right:\nRow 1: \"雪山生存指南\" | \"选择你的对手\"\nRow 2: \"你赢了！\" | \"平局\"\nRow 3: \"练习结束\" | \"雪球\"\nRow 4: \"获胜\" | \"决战雪山之巅\"."
+    },
+    {
+      "key": "ui-art-buttons",
+      "file": "Buttons",
+      "cols": 2,
+      "rows": 4,
+      "keys": [
+        "开始游戏",
+        "现在开始吧！",
+        "开始练习",
+        "再来一局",
+        "返回菜单",
+        "Enter",
+        "Esc",
+        "R"
+      ],
+      "prompt": "Create a production-ready TRANSPARENT PNG GAME LETTERING ATLAS. This is a sprite asset sheet, not a UI screenshot, poster, page, or font specimen. Reference images show the exact APPROVED Chinese snowball game art style. The user rejects formal typefaces and requires EVERY UI word to be custom drawn in the same character as the reference: rounded and friendly thick felt-tip strokes, naturally varied outlines, lively small baseline irregularities, simple readable Chinese, like the captions/buttons in the reference. No squared generic Heiti, no Songti, no thin strokes, no standard typography, no sports italics, no texture or 3D.\nPure transparent background across the canvas, including all gutters. Only the requested lettering is visible. No white paper, black background, grid lines, cell borders, buttons, labels, row numbers, headings or ornaments. ALL ink is contained in the cell interiors with at least 15% clear transparent padding at every cell edge; never cross a grid boundary. Equal cell widths/heights. Center each requested item in its assigned cell. Include every Chinese character and punctuation exactly once as specified. Do not abbreviate, repeat, skip, or change the text. Match the reference's rounded stroke and organic shape, not a font substitute. Use the same visual size for glyph heights across comparable items, adapting size only for longer phrases to fit safely.\nLayout: 2 columns x 4 rows, 2048x1536 or higher. Filled muted dark mountain-blue ink (#315E87), NO outline, NO background. Match the reference's hand-drawn button labels exactly in style: round, confident, warm and a little uneven; the English shortcuts must also be drawn by the same rounded marker, not a regular computer font. Each item on ONE line. Exact contents, in row-major order:\nRow 1: \"开始游戏\" | \"现在开始吧！\"\nRow 2: \"开始练习\" | \"再来一局\"\nRow 3: \"返回菜单\" | \"Enter\"\nRow 4: \"Esc\" | \"R\"."
+    },
+    {
+      "key": "ui-art-lessons",
+      "file": "Lessons",
+      "cols": 1,
+      "rows": 3,
+      "keys": [
+        "WASD 控制\n雪球方向",
+        "注意躲避外侧\n袭来的炮弹！",
+        "最后留在场上的\n雪球获得胜利！"
+      ],
+      "prompt": "Create a production-ready TRANSPARENT PNG GAME LETTERING ATLAS. This is a sprite asset sheet, not a UI screenshot, poster, page, or font specimen. Reference images show the exact APPROVED Chinese snowball game art style. The user rejects formal typefaces and requires EVERY UI word to be custom drawn in the same character as the reference: rounded and friendly thick felt-tip strokes, naturally varied outlines, lively small baseline irregularities, simple readable Chinese, like the captions/buttons in the reference. No squared generic Heiti, no Songti, no thin strokes, no standard typography, no sports italics, no texture or 3D.\nPure transparent background across the canvas, including all gutters. Only the requested lettering is visible. No white paper, black background, grid lines, cell borders, buttons, labels, row numbers, headings or ornaments. ALL ink is contained in the cell interiors with at least 15% clear transparent padding at every cell edge; never cross a grid boundary. Equal cell widths/heights. Center each requested item in its assigned cell. Include every Chinese character and punctuation exactly once as specified. Do not abbreviate, repeat, skip, or change the text. Match the reference's rounded stroke and organic shape, not a font substitute. Use the same visual size for glyph heights across comparable items, adapting size only for longer phrases to fit safely.\nLayout: ONE column x THREE equal rows, 1536x1536 or higher. Filled muted dark mountain-blue ink (#315E87), NO outline, NO background. The three tutorial caption blocks must match the reference's rounded hand-written captions very closely. Each cell has TWO centered lines with generous line spacing, no other content. Exact text:\nTop cell line 1 \"WASD 控制\", line 2 \"雪球方向\"\nMiddle cell line 1 \"注意躲避外侧\", line 2 \"袭来的炮弹！\"\nBottom cell line 1 \"最后留在场上的\", line 2 \"雪球获得胜利！\". Do not put tutorial pictures or frames in this asset."
+    },
+    {
+      "key": "ui-art-copy",
+      "file": "Copy",
+      "cols": 2,
+      "rows": 5,
+      "keys": [
+        "尽情地碰撞吧！",
+        "小心周围召唤的炮弹~",
+        "准备好，向雪山之巅出发！",
+        "机器人数量",
+        "位对手",
+        "自由练习",
+        "点击任意处继续 · Enter",
+        "← → 调整人数 · 0 人为自由练习",
+        "Esc 返回首页",
+        "平台空间不足，请减少机器人数。"
+      ],
+      "prompt": "Create a production-ready TRANSPARENT PNG GAME LETTERING ATLAS. This is a sprite asset sheet, not a UI screenshot, poster, page, or font specimen. Reference images show the exact APPROVED Chinese snowball game art style. The user rejects formal typefaces and requires EVERY UI word to be custom drawn in the same character as the reference: rounded and friendly thick felt-tip strokes, naturally varied outlines, lively small baseline irregularities, simple readable Chinese, like the captions/buttons in the reference. No squared generic Heiti, no Songti, no thin strokes, no standard typography, no sports italics, no texture or 3D.\nPure transparent background across the canvas, including all gutters. Only the requested lettering is visible. No white paper, black background, grid lines, cell borders, buttons, labels, row numbers, headings or ornaments. ALL ink is contained in the cell interiors with at least 15% clear transparent padding at every cell edge; never cross a grid boundary. Equal cell widths/heights. Center each requested item in its assigned cell. Include every Chinese character and punctuation exactly once as specified. Do not abbreviate, repeat, skip, or change the text. Match the reference's rounded stroke and organic shape, not a font substitute. Use the same visual size for glyph heights across comparable items, adapting size only for longer phrases to fit safely.\nLayout: TWO columns x FIVE equal rows, 2048x2048 or higher. Filled muted dark mountain-blue ink (#315E87), NO outline or background. Original rounded hand-drawn friendly caption lettering like the reference, legible at small sizes. The English and arrow shortcuts also share the same marker stroke. Every item fits on ONE line; use a somewhat smaller size for long phrases and generous spacing. Exact row-major contents:\nRow 1: \"尽情地碰撞吧！\" | \"小心周围召唤的炮弹~\"\nRow 2: \"准备好，向雪山之巅出发！\" | \"机器人数量\"\nRow 3: \"位对手\" | \"自由练习\"\nRow 4: \"点击任意处继续 · Enter\" | \"← → 调整人数 · 0 人为自由练习\"\nRow 5: \"Esc 返回首页\" | \"平台空间不足，请减少机器人数。\"."
+    },
+    {
+      "key": "ui-art-numbers",
+      "file": "Numbers",
+      "cols": 4,
+      "rows": 3,
+      "keys": [
+        "digit/0",
+        "digit/1",
+        "digit/2",
+        "digit/3",
+        "digit/4",
+        "digit/5",
+        "digit/6",
+        "digit/7",
+        "digit/8",
+        "digit/9",
+        "+",
+        "−"
+      ],
+      "prompt": "Create a production-ready TRANSPARENT PNG GAME LETTERING ATLAS. This is a sprite asset sheet, not a UI screenshot, poster, page, or font specimen. Reference images show the exact APPROVED Chinese snowball game art style. The user rejects formal typefaces and requires EVERY UI word to be custom drawn in the same character as the reference: rounded and friendly thick felt-tip strokes, naturally varied outlines, lively small baseline irregularities, simple readable Chinese, like the captions/buttons in the reference. No squared generic Heiti, no Songti, no thin strokes, no standard typography, no sports italics, no texture or 3D.\nPure transparent background across the canvas, including all gutters. Only the requested lettering is visible. No white paper, black background, grid lines, cell borders, buttons, labels, row numbers, headings or ornaments. ALL ink is contained in the cell interiors with at least 15% clear transparent padding at every cell edge; never cross a grid boundary. Equal cell widths/heights. Center each requested item in its assigned cell. Include every Chinese character and punctuation exactly once as specified. Do not abbreviate, repeat, skip, or change the text. Match the reference's rounded stroke and organic shape, not a font substitute. Use the same visual size for glyph heights across comparable items, adapting size only for longer phrases to fit safely.\nLayout: FOUR columns x THREE equal rows, 2048x1536 or higher. Each cell contains exactly ONE single hand-drawn numeral or symbol, in filled muted dark mountain-blue ink (#315E87), NO outline or background. The numbers must match the reference's cheerful rounded counter, not a serif or computer numeral, with broad round strokes, naturally varied and balanced. All numerals same ink height and common visual baseline, only the single characters, no words. Exact cells row-major:\nRow 1: 0 | 1 | 2 | 3\nRow 2: 4 | 5 | 6 | 7\nRow 3: 8 | 9 | + | − . The last symbol is only a minus sign, no dot or period."
+    },
+    {
+      "key": "ui-art-outlined-numbers",
+      "file": "OutlinedNumbers",
+      "cols": 5,
+      "rows": 2,
+      "rowColumnCuts": { "0": [0, 0.2, 0.4, 0.6, 0.7953776775648252, 1] },
+      "keys": [
+        "outline/0",
+        "outline/1",
+        "outline/2",
+        "outline/3",
+        "outline/4",
+        "outline/5",
+        "outline/6",
+        "outline/7",
+        "outline/8",
+        "outline/9"
+      ],
+      "prompt": "Create a production-ready TRANSPARENT PNG GAME LETTERING ATLAS. This is a sprite asset sheet, not a UI screenshot, poster, page, or font specimen. Reference images show the exact APPROVED Chinese snowball game art style. The user rejects formal typefaces and requires EVERY UI word to be custom drawn in the same character as the reference: rounded and friendly thick felt-tip strokes, naturally varied outlines, lively small baseline irregularities, simple readable Chinese, like the captions/buttons in the reference. No squared generic Heiti, no Songti, no thin strokes, no standard typography, no sports italics, no texture or 3D.\nPure transparent background across the canvas, including all gutters. Only the requested lettering is visible. No white paper, black background, grid lines, cell borders, buttons, labels, row numbers, headings or ornaments. ALL ink is contained in the cell interiors with at least 15% clear transparent padding at every cell edge; never cross a grid boundary. Equal cell widths/heights. Center each requested item in its assigned cell. Include every Chinese character and punctuation exactly once as specified. Do not abbreviate, repeat, skip, or change the text. Match the reference's rounded stroke and organic shape, not a font substitute. Use the same visual size for glyph heights across comparable items, adapting size only for longer phrases to fit safely.\nLayout: FIVE columns x TWO equal rows, 2048x1024 or higher. Each cell contains ONE hand-drawn numeral. Opaque WHITE filled chunky rounded numerals, with a thin muted mountain-blue outline (#5B82A6); transparent outside and inside counters. Match the approved Chinese heading's puffy handwritten quality. No shadow or backplate. All glyphs share the same ink height. Exact row-major cells:\nRow 1: 0 | 1 | 2 | 3 | 4\nRow 2: 5 | 6 | 7 | 8 | 9."
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# 雪山滚雪球
+# 决战雪山之巅
 
 一个在雪山顶上滚雪球的多人混战小游戏。球会随着滚动不断变大变重，把对手撞下平台，活到最后的人获胜。20 秒后山顶的炮台开始轰击平台，逼所有人动起来。
 
@@ -15,7 +15,7 @@ Unity 6000.3.28f1 / URP。Windows 平台，键盘操作。
 - **炮击**：20 秒后平台边缘出现炮台，沿直径方向开火，被命中的球直接出局
 - **获胜**：最后一个留在平台上的人赢
 
-开局依次经过首页、三图教程和人数选择。首页点击“开始游戏”或按 `Enter` 查看教程；教程点击任意处或按 `Enter` 继续；人数选择支持 0～15 个机器人，0 人为自由练习。
+开局依次经过首页、三图教程和人数选择。首页点击“开始游戏”或按 `Enter` 查看教程；教程点击任意处或按 `Enter` 继续；人数选择支持 0～15 个机器人，点击“现在开始吧！”或按 `Enter` 开局，0 人时显示“开始练习”。
 
 操作：`WASD` 移动，`←→` 或加减按钮在人数选择页调整机器人数量，`Enter` 开局，`Esc` 返回首页，出局后 `R` 重开。
 
@@ -135,5 +135,7 @@ Builds/Windows/SnowballArena.exe --cannon-smoke TestResults/cannon-smoke
 实现细节、参数含义和调参记录都在 [docs/technical-notes.md](docs/technical-notes.md)。美术资源的来源与复现方式见 [docs/art/README.md](docs/art/README.md)。
 
 ## 许可
+
+手写界面素材、资源制作方式与实机审阅说明见 [UI 文档](docs/ui/README.md)。备用字体霞鹜漫黑的 OFL 1.1 授权见 [字体许可](Assets/Resources/UI/OFL.txt)。
 
 程序与自制资源为本项目所有。第三方音频与模型素材的逐项许可见 [Assets/SnowballArena/Audio/LICENSE.txt](Assets/SnowballArena/Audio/LICENSE.txt) 和 [docs/art/README.md](docs/art/README.md)，其中大部分为 CC0，炮击与爆炸音效含 **CC-BY 3.0** 素材，需要保留署名。
