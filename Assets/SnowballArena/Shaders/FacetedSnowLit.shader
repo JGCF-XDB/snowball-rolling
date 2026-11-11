@@ -10,6 +10,9 @@ Shader "SnowArena/FacetedSnowLit"
         _IsIce("Glacier surface", Range(0,1)) = 0
         _ValleyFogStart("Valley fog height", Float) = -5
         _ValleyFogDensity("Valley fog density", Float) = 0.025
+        _ContactPoint("Contact point (object space)", Vector) = (0,0,0,0)
+        _ContactDepth("Contact dent depth", Float) = 0
+        _ContactRadius("Contact dent radius", Float) = 1
         [HideInInspector] _Cull("Cull", Float) = 2
         [HideInInspector] _ZWrite("ZWrite", Float) = 1
         [HideInInspector] _SrcBlend("Source blend", Float) = 1
@@ -25,6 +28,8 @@ Shader "SnowArena/FacetedSnowLit"
             half4 _BaseColor;
             half _Smoothness, _Metallic, _SnowDetail, _GroundTracks, _IsIce;
             float _ValleyFogStart, _ValleyFogDensity;
+            float4 _ContactPoint;
+            float _ContactDepth, _ContactRadius;
         CBUFFER_END
         struct Attributes
         {
@@ -50,10 +55,20 @@ Shader "SnowArena/FacetedSnowLit"
             UNITY_SETUP_INSTANCE_ID(input);
             UNITY_TRANSFER_INSTANCE_ID(input, output);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-            VertexPositionInputs position = GetVertexPositionInputs(input.positionOS.xyz);
+            // A local dent: vertices near the contact point are pushed toward the ball centre,
+            // so the impact deforms one face while the silhouette keeps its size. Scaling the
+            // whole transform (the old approach) read as the ball shrinking instead.
+            float3 objectPosition = input.positionOS.xyz;
+            if (_ContactDepth > 0.0)
+            {
+                float distanceToContact = distance(objectPosition, _ContactPoint.xyz);
+                float falloff = saturate(1.0 - distanceToContact / max(_ContactRadius, 0.0001));
+                objectPosition -= normalize(objectPosition) * (_ContactDepth * falloff * falloff);
+            }
+            VertexPositionInputs position = GetVertexPositionInputs(objectPosition);
             output.positionCS = position.positionCS;
             output.positionWS = position.positionWS;
-            output.positionOS = input.positionOS.xyz;
+            output.positionOS = objectPosition;
             output.normalWS = TransformObjectToWorldNormal(input.normalOS);
             output.color = input.color;
             output.fog = ComputeFogFactor(position.positionCS.z);

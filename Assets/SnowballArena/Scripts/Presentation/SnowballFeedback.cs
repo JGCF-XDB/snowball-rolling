@@ -30,6 +30,9 @@ namespace SnowballArena
         private SnowballBody ball;
         private SnowballMotor motor;
         private AudioSource rollSource;
+        private MeshRenderer visualRenderer;
+        private MaterialPropertyBlock dentProperties;
+        private Vector3 contactLocal;
         private Vector3 squashAxis = Vector3.up;
         private float squash;
         private float squashVelocity;
@@ -40,6 +43,8 @@ namespace SnowballArena
         {
             ball = GetComponent<SnowballBody>();
             motor = GetComponent<SnowballMotor>();
+            if (dentProperties == null) dentProperties = new MaterialPropertyBlock();
+            visualRenderer = ball != null && ball.visual != null ? ball.visual.GetComponent<MeshRenderer>() : null;
             if (rollSource == null) BuildRollSource();
         }
 
@@ -74,17 +79,20 @@ namespace SnowballArena
             if (impact < minimumImpactSpeed) return;
             var other = collision.collider.GetComponentInParent<SnowballBody>();
             bool ballToBall = other != null && other != ball;
-            // Heavy feedback is the player's channel: snow puffs, shake and hit stop only fire
-            // for contacts the player is part of, so bot-vs-bot collisions stay quiet. Both
-            // balls get the callback, so the check runs on either side of the contact.
-            bool playerInvolved = ball != null && ball.isPlayer || other != null && other.isPlayer;
-            if (!playerInvolved) return;
             // Both balls receive the callback for the same contact; only one reports it.
             if (ballToBall && other.gameObject.GetInstanceID() < gameObject.GetInstanceID()) return;
             // Square root keeps medium-speed hits meaningful; a linear curve pushed the
             // big-hit rewards past speeds a 11 m arena never reaches.
             float strength = Mathf.Sqrt(Mathf.InverseLerp(minimumImpactSpeed, maximumImpactSpeed, impact));
             Vector3 point = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
+            // Two channels: the player's contacts get the full treatment, bot-on-bot gets a
+            // quiet knock so the arena is not silent but never competes with the player.
+            bool playerInvolved = ball != null && ball.isPlayer || other != null && other.isPlayer;
+            if (!playerInvolved)
+            {
+                if (ballToBall && ArenaFeedback.Instance != null) ArenaFeedback.Instance.BallChatter(point, strength);
+                return;
+            }
             if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.Impact(point, strength, !ballToBall);
             if (ballToBall) ApplySquash(point, strength);
         }
@@ -101,6 +109,7 @@ namespace SnowballArena
             Vector3 axis = transform.position - contactPoint;
             if (axis.sqrMagnitude < 0.0001f) return;
             squashAxis = axis.normalized;
+            if (ball.visual != null) contactLocal = ball.visual.InverseTransformPoint(contactPoint);
             // Depth follows impact strength: a light nudge barely deforms the snowball and
             // maximumSquash is reserved for a full-speed hit.
             squash = Mathf.Max(squash, maximumSquash * Mathf.Pow(Mathf.Clamp01(strength), 1.5f));
@@ -119,16 +128,25 @@ namespace SnowballArena
             {
                 squash = 0f;
                 squashVelocity = 0f;
+                ApplyDent(0f);
                 return;
             }
-            float size = ball.Radius * 2f;
-            Vector3 d = squashAxis;
-            float alongAxis = 1f - squash;        // squeezed along the contact axis
-            float sideways = 1f + squash * 0.75f;  // bulges out; exaggerated so the skin still reads
-            ball.visual.localScale = new Vector3(
-                size * (alongAxis * d.x * d.x + sideways * (1f - d.x * d.x)),
-                size * (alongAxis * d.y * d.y + sideways * (1f - d.y * d.y)),
-                size * (alongAxis * d.z * d.z + sideways * (1f - d.z * d.z)));
+            // The transform stays uniform, so the ball never appears to shrink. The impact shows
+            // up as a dent in the shader instead, which keeps the silhouette and the size.
+            ball.visual.localScale = Vector3.one * (ball.Radius * 2f);
+            ApplyDent(squash);
+        }
+
+        // Feeds the contact dent to FacetedSnowLit. Coordinates are mesh-local: the ball mesh is a
+        // unit sphere, so its radius is 0.5 and depths are expressed in that space.
+        private void ApplyDent(float depth)
+        {
+            if (visualRenderer == null) return;
+            visualRenderer.GetPropertyBlock(dentProperties);
+            dentProperties.SetVector("_ContactPoint", new Vector4(contactLocal.x, contactLocal.y, contactLocal.z, 0f));
+            dentProperties.SetFloat("_ContactDepth", depth * 0.5f);
+            dentProperties.SetFloat("_ContactRadius", 0.75f);
+            visualRenderer.SetPropertyBlock(dentProperties);
         }
 
         private void Update()

@@ -103,6 +103,18 @@ namespace SnowballArena
                 Hitstop(Mathf.Lerp(hitstopMinSeconds, hitstopMaxSeconds, Mathf.InverseLerp(hitstopThreshold, 1f, strength)));
         }
 
+        /// <summary>
+        /// Ball-on-ball contact the player is not part of. Audible so the arena has life, but kept
+        /// well under the player's own channel: no shake, no puff, no hit stop.
+        /// </summary>
+        public void BallChatter(Vector3 point, float strength)
+        {
+            strength = Mathf.Clamp01(strength);
+            AudioClip clip = library == null ? null : library.ImpactClip(strength);
+            if (clip == null) return;
+            Play(clip, point, Mathf.Lerp(0.06f, 0.22f, strength) * masterVolume, Random.Range(0.95f, 1.15f), true);
+        }
+
         public void UiClick() => Play(library == null ? null : library.click, Vector3.zero, 0.7f * masterVolume, 1f, false);
         public void UiHover() => Play(library == null ? null : library.hover, Vector3.zero, 0.4f * masterVolume, 1f, false);
         public void UiConfirm() => Play(library == null ? null : library.confirm, Vector3.zero, 0.85f * masterVolume, 1f, false);
