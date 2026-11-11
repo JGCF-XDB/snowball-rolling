@@ -16,9 +16,9 @@ namespace SnowballArena
         [Tooltip("How far the mesh is compressed at the hardest impact.")]
         [Range(0f, 0.6f)] public float maximumSquash = 0.42f;
         [Tooltip("Spring stiffness of the squash. Higher snaps back faster.")]
-        [Min(1f)] public float squashStiffness = 210f;
+        [Min(1f)] public float squashStiffness = 130f;
         [Tooltip("Spring damping. Below critical damping leaves a visible rebound overshoot.")]
-        [Min(0f)] public float squashDamping = 12f;
+        [Min(0f)] public float squashDamping = 6f;
 
         [Header("Rolling")]
         [Range(0f, 1f)] public float rollVolume = 0.2f;
@@ -31,6 +31,7 @@ namespace SnowballArena
         private SnowballMotor motor;
         private AudioSource rollSource;
         private MeshRenderer visualRenderer;
+        private MeshRenderer outlineRenderer;
         private MaterialPropertyBlock dentProperties;
         private Vector3 contactLocal;
         private Vector3 squashAxis = Vector3.up;
@@ -45,6 +46,12 @@ namespace SnowballArena
             motor = GetComponent<SnowballMotor>();
             if (dentProperties == null) dentProperties = new MaterialPropertyBlock();
             visualRenderer = ball != null && ball.visual != null ? ball.visual.GetComponent<MeshRenderer>() : null;
+            outlineRenderer = null;
+            if (ball != null && ball.visual != null)
+            {
+                var outline = ball.visual.Find("Identity outline");
+                if (outline != null) outlineRenderer = outline.GetComponent<MeshRenderer>();
+            }
             if (rollSource == null) BuildRollSource();
         }
 
@@ -141,12 +148,20 @@ namespace SnowballArena
         // unit sphere, so its radius is 0.5 and depths are expressed in that space.
         private void ApplyDent(float depth)
         {
-            if (visualRenderer == null) return;
-            visualRenderer.GetPropertyBlock(dentProperties);
+            SetDent(visualRenderer, depth);
+            // The outline shell is opaque and slightly larger; if it ignored the dent it would
+            // sit over the crater and hide it completely.
+            SetDent(outlineRenderer, depth);
+        }
+
+        private void SetDent(MeshRenderer target, float depth)
+        {
+            if (target == null) return;
+            target.GetPropertyBlock(dentProperties);
             dentProperties.SetVector("_ContactPoint", new Vector4(contactLocal.x, contactLocal.y, contactLocal.z, 0f));
-            dentProperties.SetFloat("_ContactDepth", depth * 0.9f);
-            dentProperties.SetFloat("_ContactRadius", 0.46f);
-            visualRenderer.SetPropertyBlock(dentProperties);
+            dentProperties.SetFloat("_ContactDepth", depth * 1.15f);
+            dentProperties.SetFloat("_ContactRadius", 0.55f);
+            target.SetPropertyBlock(dentProperties);
         }
 
         private void Update()
