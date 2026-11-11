@@ -21,9 +21,11 @@ namespace SnowballArena
         [Min(0f)] public float squashDamping = 12f;
 
         [Header("Rolling")]
-        [Range(0f, 1f)] public float rollVolume = 0.35f;
+        [Range(0f, 1f)] public float rollVolume = 0.2f;
         [Min(0f)] public float rollMinSpeed = 1.5f;
-        [Min(0.1f)] public float rollMaxSpeed = 30f;
+        [Min(0.1f)] public float rollMaxSpeed = 20f;
+        [Tooltip("Share of rollVolume kept at the slowest rolling speed, so a gentle roll still reads.")]
+        [Range(0f, 1f)] public float rollFloor = 0.42f;
 
         private SnowballBody ball;
         private SnowballMotor motor;
@@ -48,8 +50,11 @@ namespace SnowballArena
             rollSource.loop = true;
             rollSource.spatialBlend = 1f;
             rollSource.rolloffMode = AudioRolloffMode.Linear;
-            rollSource.minDistance = 9f;
-            rollSource.maxDistance = 38f;
+            // The listener sits on a camera about 20 m away, so a small minDistance made the
+            // player's own roll fall off before it was audible. The far end is deliberately long:
+            // a distant ball should still be faintly audible, not silent.
+            rollSource.minDistance = 16f;
+            rollSource.maxDistance = 90f;
             rollSource.dopplerLevel = 0f;
             rollSource.volume = 0f;
             AttachRollClip();
@@ -125,7 +130,9 @@ namespace SnowballArena
                 : Vector3.ProjectOnPlane(ball.RigidBody.linearVelocity, Vector3.up).magnitude;
             bool rolling = motor != null && motor.HasSupport && speed > rollMinSpeed;
             float t = Mathf.InverseLerp(rollMinSpeed, rollMaxSpeed, speed);
-            float target = rolling ? t * rollVolume : 0f;
+            // Scaling straight up from zero made everything below cruise speed inaudible, which
+            // is most of a normal match. Keep a floor so slow rolls still carry.
+            float target = rolling ? Mathf.Lerp(rollFloor, 1f, t) * rollVolume : 0f;
             rollSource.volume = Mathf.MoveTowards(rollSource.volume, target, Time.deltaTime * 2.5f);
             // A bigger ball rolls with a lower voice, which also sells the growth.
             float size = ball != null && ball.settings != null

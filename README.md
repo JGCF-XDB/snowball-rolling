@@ -11,7 +11,7 @@ Windows 本地单机首版，Unity **6000.3.28f1** / URP / Input System。
 ## 操作
 
 - 主菜单：← / → 选择 0～15 个机器人，Enter 开始；也可以点击加减按钮。
-- 比赛：WASD 控制红色描边的白色雪球；斜向输入归一化。雪球按镜头方向移动，具有惯性。
+- 比赛：WASD 控制**暖金色描边**的白色雪球；斜向输入归一化。雪球按镜头方向移动，具有惯性。
 - Esc：返回菜单。
 - 出局或结算后：R 重新开始；玩家出局后其余雪球继续比赛，可观战。
 - 0 个机器人：自由练习，掉落后结算。
@@ -71,6 +71,36 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 - 人机决策速度上限由当前驱动力与阻力推导，不再写死 18.9 m/s（旧值只有当前速度档位的三成多）。目标质量比达到 `chargeMassRatio`（默认 1.3）且自身速度低于 `chargeTriggerSpeed`（默认 12 m/s）时进入蓄势：后退 0.9 秒拉出距离后再冲撞，冷却 3 秒。闪避有两个触发条件：对手质量达到 `threatMassRatio`（默认 1.2）倍且接近速度超过 `threatApproachSpeed`（默认 10 m/s），或单纯接近速度超过 `evadeApproachSpeed`（默认 25 m/s，不看质量）。闪避持续 0.6 秒，方向垂直于来球轨迹并偏向平台内侧。`crowdMinimum`（2）个以上对手紧贴在 `crowdGap`（1.5 m）内且自身低于 `crowdBreakoutSpeed`（3 m/s）时，进入 0.45 秒的拥挤脱离状态，朝远离整堆球的合成方向开出去。以上阈值都在 BotBrain 的 Inspector 上可调。
 - 人机 `finishOpportunityWeight = 5` 提高临边淘汰机会的决策得分；这是规则权重，不是强化学习训练。内侧贴近临边对手时锁定目标、取消低速撤退和绕行，持续施压；撞击暂时拉开距离后仍追击，摩擦顶死时小幅调整接触角度并保持向前施压。只有机会消失或自身需要刹车避险时才改变策略。刹车预测与移动控制使用同一质量曲线。
 - 球根物体缩放保持 (1,1,1)，由 SnowballBody 更新球形碰撞半径与视觉子物体尺寸。
+
+## 玩家身份与获胜演出
+
+### 怎么一眼认出自己控制的球
+
+不弹任何文字提示，只靠视觉语言：
+
+- **暖橙色描边**专属于玩家；所有机器人的描边限定在冷色系（蓝 / 青 / 紫 / 绿），不会撞色。
+- 玩家脚下常驻一块**暖橙色地面光斑**（`Resources/PlayerHalo.mat` + `SnowArena/PlayerHalo`，alpha 混合而不是加色混合——雪花近乎纯白，加色会饱和成白色，这是第一版光晕看不见的真正原因）。
+- 直径是球半径的 3.4 倍，中心 55% 接近全实心，只有最外三分之一淡出。颜色用 `(1.00, 0.62, 0.12)` 而不是更深的橙红：雪地的蓝通道接近饱和，混合后会把偏红的橙进一步拉红，绿通道必须留够才稳得住橙色。曾经加过一圈 LineRenderer 选中环，实机看太像 UI 边框，已移除。
+- 每局开始时这道光晕有一次**由大收缩、由亮转柔**的脉冲（`playerHaloPulseSeconds`，默认 1.5 s），把视线吸到自己的球上，随后保持轻微呼吸式明暗。
+- 球体本身再叠 12% 暖色，所以即便只看球本身也不是 bot 那种中性白，成长变大后依然认得出。
+
+参数都在 `SnowballAppearance` 上：`playerOutline`、`playerHaloScale`、`playerHaloPulseSeconds`。
+
+### 获胜后的三秒
+
+玩家获胜时不会立刻弹结算面板，而是先进 `MatchPhase.Victory`：
+
+1. **场景光照整体压暗**：环境光强度降到 8%、三档环境色降到 20%，场景内其余灯光降到 6%（1.1 s 渐入，结束后完整还原）。场景本身没有方向光，照明全部来自环境光，所以这条路才是真正让「聚光灯以外」变暗的方式。
+2. 一盏暖白聚光灯（34°，内锥 18°，强度 26000，跟随玩家）从上方打下来，同样渐入。
+3. 叠一层轻度 **Vignette 暗角**（强度 0.45、平滑 0.55）收边。
+4. 炮台立即停止，其余雪球冻结，**玩家仍可用 WASD 自由移动** `victorySeconds`（默认 3 s）。
+5. 时间到后冻结全场并进入 `MatchPhase.Results`，弹出结算面板；舞台灯光保持，衬着面板。
+
+后处理**不再压曝光和饱和度**：曝光是全局的，压下去会把聚光灯照亮的获胜者一起压暗，球会变成没有颜色的黑剪影。改成压环境光之后，聚光灯内的东西保持对局时的亮度和颜色，只有光锥外变暗——这也更接近真实的舞台打光。
+
+演出阶段还额外启用 **Neutral 色调映射**：项目默认 profile 的 Tonemapping 是 `None`，超过 1.0 的亮度会直接削顶成纯白，所以聚光灯无论怎么调强度都会糊成一片白。加上 Neutral 之后高光平滑滚降、色相保留，光锥内才谈得上「正常亮度」。
+
+`VictoryStage` 在运行时自建 Volume 与灯光，不需要改场景；`MatchController.celebrateVictory` 关掉即可回到旧行为，自动化对局（`MatchSmokeProbe`）就是这么做的——否则测试会卡在 3 秒演出里。
 
 ## 音效与碰撞反馈
 
@@ -134,7 +164,7 @@ increase_speed_test1 本轮仅将驱动力与主动控制下限在该分支上�
 
 炮弹击杀、机器人之间的互相推落、以及超过时间窗的旧推撞都不会触发奖励音，所以这个音永远意味着“这一下是我干的”。时间窗用 `Time.fixedTime`，与淘汰判定同在物理步内。
 
-开发版音频自检：`--audio-check <输出目录>` 会写出音频子系统状态（`outputSampleRate`、驱动能力）、AudioListener 数量与所在对象、每个 clip 的时长，以及播放后 `AudioSource.time` 是否推进，用来区分“设备没出声”与“代码没调用”。实测参考值：采样率 48000、listener 在 Main Camera、撞击音 `time` 会从 0 递增。另外 `ArenaFeedback` 在启动时设 `Application.runInBackground = true`，避免窗口失焦时 Unity 自动暂停音频。背景音乐由 `ArenaFeedback.UpdateMusic` 按对局阶段切换：菜单播 `menu_theme`，倒计时与对局播 `match_theme`，结算阶段静音以突出胜负 jingle；音量 `musicVolume`（默认 0.15）与音效音量互不干扰。两条音乐的 RMS 响度接近（菜单 ~13 dB、对局 ~14 dB），切换时不会出现“突然听不见”。滚动循环音默认 `rollVolume` 0.35、`maxDistance` 38，避免多球同时滚动时盖过碰撞声。
+开发版音频自检：`--audio-check <输出目录>` 会写出音频子系统状态（`outputSampleRate`、驱动能力）、AudioListener 数量与所在对象、每个 clip 的时长，以及播放后 `AudioSource.time` 是否推进，用来区分“设备没出声”与“代码没调用”。实测参考值：采样率 48000、listener 在 Main Camera、撞击音 `time` 会从 0 递增。另外 `ArenaFeedback` 在启动时设 `Application.runInBackground = true`，避免窗口失焦时 Unity 自动暂停音频。背景音乐由 `ArenaFeedback.UpdateMusic` 按对局阶段切换：菜单播 `menu_theme`，倒计时与对局播 `match_theme`，结算阶段静音以突出胜负 jingle；音量 `musicVolume`（默认 0.15）与音效音量互不干扰。两条音乐的 RMS 响度接近（菜单 ~13 dB、对局 ~14 dB），切换时不会出现“突然听不见”。滚动循环音默认 `rollVolume` 0.2，速度映射从 `rollMinSpeed` 1.5 到 `rollMaxSpeed` 20，并保留 `rollFloor` 0.42 的底噪——早先按速度线性缩放到 0，10 m/s 时实际音量只有约 0.1，等于听不见。3D 衰减 `minDistance` 16 / `maxDistance` 45，因为听者在约 20 m 外的相机上，minDistance 太小时玩家自己的滚动声还没到听得见的距离就被衰减掉了。
 
 ## 平台扩展
 
