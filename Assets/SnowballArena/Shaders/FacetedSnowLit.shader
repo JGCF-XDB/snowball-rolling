@@ -10,6 +10,9 @@ Shader "SnowArena/FacetedSnowLit"
         _IsIce("Glacier surface", Range(0,1)) = 0
         _ValleyFogStart("Valley fog height", Float) = -5
         _ValleyFogDensity("Valley fog density", Float) = 0.025
+        _ContactPoint("Contact point (object space)", Vector) = (0,0,0,0)
+        _ContactDepth("Contact dent depth", Float) = 0
+        _ContactRadius("Contact dent radius", Float) = 1
         [HideInInspector] _Cull("Cull", Float) = 2
         [HideInInspector] _ZWrite("ZWrite", Float) = 1
         [HideInInspector] _SrcBlend("Source blend", Float) = 1
@@ -25,6 +28,8 @@ Shader "SnowArena/FacetedSnowLit"
             half4 _BaseColor;
             half _Smoothness, _Metallic, _SnowDetail, _GroundTracks, _IsIce;
             float _ValleyFogStart, _ValleyFogDensity;
+            float4 _ContactPoint;
+            float _ContactDepth, _ContactRadius;
         CBUFFER_END
         struct Attributes
         {
@@ -41,6 +46,7 @@ Shader "SnowArena/FacetedSnowLit"
             half4 color : COLOR;
             half fog : TEXCOORD2;
             float3 positionOS : TEXCOORD3;
+            half dent : TEXCOORD4;
             UNITY_VERTEX_INPUT_INSTANCE_ID
             UNITY_VERTEX_OUTPUT_STEREO
         };
@@ -50,11 +56,34 @@ Shader "SnowArena/FacetedSnowLit"
             UNITY_SETUP_INSTANCE_ID(input);
             UNITY_TRANSFER_INSTANCE_ID(input, output);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-            VertexPositionInputs position = GetVertexPositionInputs(input.positionOS.xyz);
+            // A local dent: vertices near the contact point are pushed toward the ball centre,
+            // so the impact deforms one face while the silhouette keeps its size. Scaling the
+            // whole transform (the old approach) read as the ball shrinking instead.
+            float3 objectPosition = input.positionOS.xyz;
+            float3 objectNormal = input.normalOS;
+            half dent = 0;
+            if (_ContactDepth > 0.0)
+            {
+                float distanceToContact = distance(objectPosition, _ContactPoint.xyz);
+                // Smooth radial falloff. A squared falloff made the dent very local but left the
+                // rim untouched, so the silhouette never changed and the result read as shading
+                // rather than deformation.
+                float radial = saturate(distanceToContact / max(_ContactRadius, 0.0001));
+                float falloff = 1.0 - radial * radial * (3.0 - 2.0 * radial);
+                float depth = _ContactDepth * falloff;
+                objectPosition -= normalize(objectPosition) * depth;
+                // Normals tilt partway toward the contact: enough to catch light on the rim,
+                // not so much that the patch turns into a flat dark stain.
+                float3 towardContact = normalize(_ContactPoint.xyz - objectPosition);
+                objectNormal = normalize(lerp(objectNormal, towardContact, saturate(falloff * 0.55)));
+                dent = saturate(falloff * saturate(_ContactDepth * 3.0));
+            }
+            VertexPositionInputs position = GetVertexPositionInputs(objectPosition);
             output.positionCS = position.positionCS;
             output.positionWS = position.positionWS;
-            output.positionOS = input.positionOS.xyz;
-            output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+            output.positionOS = objectPosition;
+            output.dent = dent;
+            output.normalWS = TransformObjectToWorldNormal(objectNormal);
             output.color = input.color;
             output.fog = ComputeFogFactor(position.positionCS.z);
             return output;
@@ -85,7 +114,7 @@ Shader "SnowArena/FacetedSnowLit"
             float3 grainPosition = lerp(input.positionOS*4,input.positionWS,_GroundTracks);
             float grain = Noise(grainPosition.xz*27.0+grainPosition.y*3.4);
             float drift = Noise(grainPosition.xz*0.7+grainPosition.y)*0.6+Noise(grainPosition.xz*2.8)*0.4;
-            half3 albedo = input.color.rgb * _BaseColor.rgb;
+            half3 albedo = input.color.rgb * _BaseColor.rgb * (1.0 - input.dent * 0.22);
             albedo *= 1 + _SnowDetail * ((grain-0.5)*0.045+(drift-0.5)*0.07);
             if (_GroundTracks > 0.5 && normal.y > 0.8)
             {

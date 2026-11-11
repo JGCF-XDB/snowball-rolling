@@ -107,6 +107,52 @@ namespace SnowballArena.Editor
                     new Vector3(5f, radius, 0f), out _), "Shell already past the ball was still treated as a threat");
                 return "Approaching shell threatens, passed shell does not";
             });
+            Check("Ball squash registers against the contact axis", () =>
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeBuilder.PrefabPath);
+                Require(prefab != null, "Missing snowball prefab");
+                var instance = UnityEngine.Object.Instantiate(prefab);
+                try
+                {
+                    var body = instance.GetComponent<SnowballBody>();
+                    Require(body != null, "Prefab is missing SnowballBody");
+                    // SnowballFeedback is added by Initialize, not authored on the prefab.
+                    body.Initialize();
+                    var feedback = instance.GetComponent<SnowballFeedback>();
+                    Require(feedback != null, "Initialize did not add SnowballFeedback");
+                    Require(body.visual != null, "Prefab has no visual transform, so squash could never apply");
+                    feedback.ApplySquash(instance.transform.position + Vector3.right * body.Radius, 1f);
+                    float full = feedback.SquashDepth;
+                    Require(full > 0.2f, $"Full-strength hit only registered {full:F2} of squash");
+                    Require(full <= feedback.maximumSquash + 0.001f, "Squash exceeded maximumSquash");
+                    return $"Full strength registers {full:F2} against a {feedback.maximumSquash:F2} maximum";
+                }
+                finally { UnityEngine.Object.DestroyImmediate(instance); }
+            });
+            Check("Dent depth follows impact strength", () =>
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeBuilder.PrefabPath);
+                Require(prefab != null, "Missing snowball prefab");
+                float Measure(float strength)
+                {
+                    var copy = UnityEngine.Object.Instantiate(prefab);
+                    try
+                    {
+                        var body = copy.GetComponent<SnowballBody>();
+                        body.Initialize();
+                        var feedback = copy.GetComponent<SnowballFeedback>();
+                        Require(feedback != null, "Initialize did not add SnowballFeedback");
+                        feedback.ApplySquash(copy.transform.position + Vector3.right * body.Radius, strength);
+                        return feedback.SquashDepth;
+                    }
+                    finally { UnityEngine.Object.DestroyImmediate(copy); }
+                }
+                float light = Measure(0.35f);
+                float heavy = Measure(1f);
+                Require(light > 0f, "A light hit produced no dent at all");
+                Require(light < heavy * 0.5f, $"Light hit {light:F3} is not clearly below a heavy {heavy:F3}");
+                return $"light {light:F3} vs heavy {heavy:F3}";
+            });
             Check("Every ball gets the impact clamp component", () =>
             {
                 using var world = new World();

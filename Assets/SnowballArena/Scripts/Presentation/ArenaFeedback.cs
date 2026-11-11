@@ -16,13 +16,13 @@ namespace SnowballArena
 
         [Header("Impact feel")]
         [Tooltip("Impact strength needed before the camera moves at all. Below this only sound, snow and squash react.")]
-        [Range(0f, 1f)] public float shakeThreshold = 0.62f;
+        [Range(0f, 1f)] public float shakeThreshold = 0.48f;
         [Min(0f)] public float shakeMinAmplitude = 0.07f;
         [Min(0f)] public float shakeMaxAmplitude = 0.3f;
         [Tooltip("Impact strength that bursts the extra snow ring.")]
-        [Range(0f, 1f)] public float burstThreshold = 0.75f;
+        [Range(0f, 1f)] public float burstThreshold = 0.62f;
         [Tooltip("Impact strength that earns a hit stop. Deliberately rare, so it reads as a reward.")]
-        [Range(0f, 1f)] public float hitstopThreshold = 0.9f;
+        [Range(0f, 1f)] public float hitstopThreshold = 0.82f;
         [Min(0f)] public float hitstopMinSeconds = 0.02f;
         [Min(0f)] public float hitstopMaxSeconds = 0.035f;
 
@@ -101,6 +101,22 @@ namespace SnowballArena
             }
             if (!ground && strength >= hitstopThreshold)
                 Hitstop(Mathf.Lerp(hitstopMinSeconds, hitstopMaxSeconds, Mathf.InverseLerp(hitstopThreshold, 1f, strength)));
+        }
+
+        /// <summary>
+        /// Ball-on-ball contact the player is not part of. Audible so the arena has life, but kept
+        /// well under the player's own channel: no shake, no puff, no hit stop.
+        /// </summary>
+        public void BallChatter(Vector3 point, float strength)
+        {
+            strength = Mathf.Clamp01(strength);
+            AudioClip clip = library == null ? null : library.ImpactClip(strength);
+            // Three quarters of the player's level: clearly present, still below a hit you caused.
+            if (clip != null)
+                Play(clip, point, Mathf.Lerp(0.25f, 0.95f, strength) * 0.75f * masterVolume, Random.Range(0.95f, 1.15f), true);
+            // Snow still puffs off a bot collision; camera shake and hit stop stay reserved for
+            // the player's own contacts.
+            Burst(point, strength * 0.7f);
         }
 
         public void UiClick() => Play(library == null ? null : library.click, Vector3.zero, 0.7f * masterVolume, 1f, false);
@@ -320,7 +336,9 @@ namespace SnowballArena
         {
             if (burst == null) return;
             if (!burst.isPlaying) burst.Play();
-            int count = Mathf.RoundToInt(Mathf.Lerp(10f, 34f, strength));
+            // Density was hiding the contact dent: a dozen large opaque puffs sat right on top
+            // of the point we want the player to see.
+            int count = Mathf.RoundToInt(Mathf.Lerp(5f, 16f, strength));
             for (int i = 0; i < count; i++) EmitOne(point, strength, 1f);
             // A near-maximum hit gets a wider, faster ring so the reward reads as a burst
             // rather than just a slightly bigger puff.
@@ -330,13 +348,16 @@ namespace SnowballArena
 
         private void EmitOne(Vector3 point, float strength, float speedScale)
         {
+            // Thrown mostly upward and outward, never straight through the ball, so the burst
+            // reads as snow flying off rather than a cloud sitting over the impact.
+            Vector3 flare = new Vector3(Random.Range(-1f, 1f), Random.Range(0.45f, 1.6f), Random.Range(-1f, 1f)).normalized;
             var emit = new ParticleSystem.EmitParams
             {
-                position = point + Random.insideUnitSphere * 0.22f,
-                velocity = (Random.onUnitSphere * Random.Range(1.1f, 3.4f) + Vector3.up * 1.3f) * speedScale,
-                startSize = Random.Range(0.22f, 0.55f) * Mathf.Lerp(0.85f, 1.4f, strength),
-                startLifetime = Random.Range(0.25f, 0.6f),
-                startColor = new Color(0.95f, 0.98f, 1f, 0.9f),
+                position = point + Random.insideUnitSphere * 0.1f,
+                velocity = (flare * Random.Range(1.6f, 3.6f) + Vector3.up * 1.1f) * speedScale,
+                startSize = Random.Range(0.12f, 0.32f) * Mathf.Lerp(0.9f, 1.3f, strength),
+                startLifetime = Random.Range(0.16f, 0.34f),
+                startColor = new Color(0.95f, 0.98f, 1f, 0.55f),
                 applyShapeToPosition = false,
             };
             burst.Emit(emit, 1);

@@ -14,11 +14,19 @@ namespace SnowballArena
         [Tooltip("Approach speed treated as a maximum-strength impact, in m/s. Matches the speed a real collision reaches on an 11 m platform.")]
         public float maximumImpactSpeed = 28f;
         [Tooltip("How far the mesh is compressed at the hardest impact.")]
-        [Range(0f, 0.6f)] public float maximumSquash = 0.34f;
+        [Range(0f, 0.6f)] public float maximumSquash = 0.42f;
         [Tooltip("Spring stiffness of the squash. Higher snaps back faster.")]
-        [Min(1f)] public float squashStiffness = 210f;
+        [Min(1f)] public float squashStiffness = 130f;
         [Tooltip("Spring damping. Below critical damping leaves a visible rebound overshoot.")]
-        [Min(0f)] public float squashDamping = 12f;
+        [Min(0f)] public float squashDamping = 6f;
+        [Tooltip("Seconds the hardest hit holds its dent before the spring releases.")]
+        [Min(0f)] public float squashHoldSeconds = 0.35f;
+        [Tooltip("Share of squashHoldSeconds a barely-there nudge holds. Keeps light taps from looking as heavy as a ram.")]
+        [Range(0f, 1f)] public float lightHitHoldShare = 0.3f;
+        [Tooltip("Dent radius for the lightest hit, as a fraction of the ball's unit radius.")]
+        [Min(0.05f)] public float lightDentRadius = 0.26f;
+        [Tooltip("Dent radius for a full-speed hit.")]
+        [Min(0.05f)] public float heavyDentRadius = 0.78f;
 
         [Header("Rolling")]
         [Range(0f, 1f)] public float rollVolume = 0.2f;
@@ -30,9 +38,15 @@ namespace SnowballArena
         private SnowballBody ball;
         private SnowballMotor motor;
         private AudioSource rollSource;
+        private MeshRenderer visualRenderer;
+        private MeshRenderer outlineRenderer;
+        private MaterialPropertyBlock dentProperties;
+        private Vector3 contactLocal;
         private Vector3 squashAxis = Vector3.up;
         private float squash;
         private float squashVelocity;
+        private float holdUntil;
+        private float impactStrength;
 
         private void Awake() => Initialize();
 
@@ -40,6 +54,14 @@ namespace SnowballArena
         {
             ball = GetComponent<SnowballBody>();
             motor = GetComponent<SnowballMotor>();
+            if (dentProperties == null) dentProperties = new MaterialPropertyBlock();
+            visualRenderer = ball != null && ball.visual != null ? ball.visual.GetComponent<MeshRenderer>() : null;
+            outlineRenderer = null;
+            if (ball != null && ball.visual != null)
+            {
+                var outline = ball.visual.Find("Identity outline");
+                if (outline != null) outlineRenderer = outline.GetComponent<MeshRenderer>();
+            }
             if (rollSource == null) BuildRollSource();
         }
 
@@ -80,19 +102,39 @@ namespace SnowballArena
             // big-hit rewards past speeds a 11 m arena never reaches.
             float strength = Mathf.Sqrt(Mathf.InverseLerp(minimumImpactSpeed, maximumImpactSpeed, impact));
             Vector3 point = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
+            // Two channels: the player's contacts get the full treatment, bot-on-bot gets a
+            // quiet knock so the arena is not silent but never competes with the player.
+            bool playerInvolved = ball != null && ball.isPlayer || other != null && other.isPlayer;
+            if (!playerInvolved)
+            {
+                if (ballToBall && ArenaFeedback.Instance != null) ArenaFeedback.Instance.BallChatter(point, strength);
+                return;
+            }
             if (ArenaFeedback.Instance != null) ArenaFeedback.Instance.Impact(point, strength, !ballToBall);
-            if (ballToBall) Squash(point, strength);
+            if (ballToBall) ApplySquash(point, strength);
         }
 
-        private void Squash(Vector3 contactPoint, float strength)
+        /// <summary>Current compression depth, 0..maximumSquash. Exposed so tests can see it.</summary>
+        public float SquashDepth => squash;
+
+        /// <summary>
+        /// Registers a hit against the contact point. The spring integrates in LateUpdate, so this
+        /// only sets the target; call it from collision handling.
+        /// </summary>
+        public void ApplySquash(Vector3 contactPoint, float strength)
         {
             Vector3 axis = transform.position - contactPoint;
             if (axis.sqrMagnitude < 0.0001f) return;
             squashAxis = axis.normalized;
+            if (ball.visual != null) contactLocal = ball.visual.InverseTransformPoint(contactPoint);
             // Depth follows impact strength: a light nudge barely deforms the snowball and
             // maximumSquash is reserved for a full-speed hit.
-            squash = Mathf.Max(squash, maximumSquash * Mathf.Pow(Mathf.Clamp01(strength), 1.5f));
-            squashVelocity = Mathf.Min(squashVelocity, 0f);
+            // One strength value drives all three dimensions of the dent, so a ram and a nudge do
+            // not look the same: depth (below), footprint and how long it stays.
+            impactStrength = Mathf.Clamp01(strength);
+            squash = Mathf.Max(squash, maximumSquash * Mathf.Pow(impactStrength, 1.5f));
+            squashVelocity = 0f;
+            holdUntil = Time.time + Mathf.Lerp(squashHoldSeconds * lightHitHoldShare, squashHoldSeconds, impactStrength);
         }
 
         private void LateUpdate()
@@ -103,20 +145,46 @@ namespace SnowballArena
             // the hit reads as a bounce rather than a static dent.
             squashVelocity += (-squashStiffness * squash - squashDamping * squashVelocity) * dt;
             squash += squashVelocity * dt;
+            // Hold the crush at full depth for a moment. Springing straight back was too fast to
+            // see, especially with the snow burst covering the contact point.
+            if (Time.time < holdUntil)
+            {
+                ball.visual.localScale = Vector3.one * (ball.Radius * 2f);
+                ApplyDent(squash);
+                squashVelocity = 0f;
+                return;
+            }
             if (Mathf.Abs(squash) < 0.0005f && Mathf.Abs(squashVelocity) < 0.03f)
             {
                 squash = 0f;
                 squashVelocity = 0f;
+                ApplyDent(0f);
                 return;
             }
-            float size = ball.Radius * 2f;
-            Vector3 d = squashAxis;
-            float alongAxis = 1f - squash;        // squeezed along the contact axis
-            float sideways = 1f + squash * 0.5f;  // bulges out, roughly keeping volume
-            ball.visual.localScale = new Vector3(
-                size * (alongAxis * d.x * d.x + sideways * (1f - d.x * d.x)),
-                size * (alongAxis * d.y * d.y + sideways * (1f - d.y * d.y)),
-                size * (alongAxis * d.z * d.z + sideways * (1f - d.z * d.z)));
+            // The transform stays uniform, so the ball never appears to shrink. The impact shows
+            // up as a dent in the shader instead, which keeps the silhouette and the size.
+            ball.visual.localScale = Vector3.one * (ball.Radius * 2f);
+            ApplyDent(squash);
+        }
+
+        // Feeds the contact dent to FacetedSnowLit. Coordinates are mesh-local: the ball mesh is a
+        // unit sphere, so its radius is 0.5 and depths are expressed in that space.
+        private void ApplyDent(float depth)
+        {
+            SetDent(visualRenderer, depth);
+            // The outline shell is opaque and slightly larger; if it ignored the dent it would
+            // sit over the crater and hide it completely.
+            SetDent(outlineRenderer, depth);
+        }
+
+        private void SetDent(MeshRenderer target, float depth)
+        {
+            if (target == null) return;
+            target.GetPropertyBlock(dentProperties);
+            dentProperties.SetVector("_ContactPoint", new Vector4(contactLocal.x, contactLocal.y, contactLocal.z, 0f));
+            dentProperties.SetFloat("_ContactDepth", depth * 1.5f);
+            dentProperties.SetFloat("_ContactRadius", Mathf.Lerp(lightDentRadius, heavyDentRadius, impactStrength));
+            target.SetPropertyBlock(dentProperties);
         }
 
         private void Update()
